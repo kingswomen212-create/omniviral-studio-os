@@ -97,6 +97,8 @@ const ALL_COMMANDS: PaletteItem[] = [
   { id: 'explore', name: 'Explore Showcase Hub', category: 'Home', desc: 'Overview of all studios, live telemetry & recent reels', icon: <Sparkles size={16} /> },
   { id: 'all_generators', name: 'All 24 AI Video Generators', category: 'Tools', desc: 'True Crime, POV, Documentary, Kids, Anatomy, Explainer & more', icon: <Zap size={16} /> },
   { id: 'hyperframes_studio', name: 'HyperFrames 60fps Motion Studio', category: 'Motion', desc: 'Code driven 60fps kinetic typography, stat cards & -14 LUFS audio', icon: <Sparkles size={16} /> },
+  { id: 'commercial_motion', name: 'Commercial Motion & Effects Studio (v9.0)', category: 'Motion', desc: 'Google/Apple 60fps spring pills, floating shadows, Search/Map UI & AI Sparkle', icon: <Sparkles size={16} /> },
+  { id: 'agent_two_engine', name: 'Agent Two Director & GPU Render Engine (v10.0)', category: 'Engine', desc: '5-Agent film pipeline, 3x3 storyboard, GPU AMF/MF, FidelityFX CAS 4K & Halation', icon: <Zap size={16} /> },
   { id: 'script_to_video', name: 'Script to Video AI', category: 'Workflow', desc: 'Paste any script for auto scene split, 10 art styles & 4K export', icon: <Film size={16} /> },
   { id: 'lyric_video', name: 'AI Lyric Video Maker', category: 'Music', desc: 'Sync bold animated lyrics over reactive music waveforms', icon: <Music size={16} /> },
   { id: 'clipping_agent', name: 'Clipping Agent (Long Video to Shorts)', category: 'Agents', desc: 'Eromify style: upload long video, get viral 9:16 clips out', icon: <Scissors size={16} /> },
@@ -298,6 +300,8 @@ export function ExploreShowcase({
   }, []);
 
   const highlights: { id: ActiveTool; title: string; badge: string; desc: string; icon: React.ReactNode }[] = [
+    { id: 'agent_two_engine', title: 'Agent Two & GPU Render Engine v10', badge: 'GPU + CAS', desc: '5-Agent cinema director, 3x3 continuity storyboard, FidelityFX CAS Super-Res, Halation & BT.709.', icon: <Zap size={20} color="var(--accent)" /> },
+    { id: 'commercial_motion', title: 'Commercial Motion Studio v9.0', badge: '60FPS NEW', desc: 'Google & Apple style floating shadowed pills, dynamic ground shadows, typing Search/Map UI & AI Sparkle.', icon: <Sparkles size={20} color="var(--accent)" /> },
     { id: 'cinema_studio', title: 'Cinema Studio 3.0', badge: 'FLAGSHIP', desc: 'Deterministic camera rigs, ARRI & 35mm optics, Color LUTs, Hero Filmstrip & 122px viral captions.', icon: <Film size={20} color="var(--accent)" /> },
     { id: 'click_to_ad', title: 'Marketing Click to Ad', badge: 'E-COMMERCE', desc: 'Paste any store URL and price to render a vertical commercial ad with CTA overlay.', icon: <ShoppingBag size={20} color="var(--accent)" /> },
     { id: 'short_drama', title: 'Short Drama Studio', badge: 'NEW', desc: 'Dual actor vertical series with separate neural voices, Anamorphic 2.39 optics & Moody A24 grade.', icon: <Clapperboard size={20} color="var(--accent)" /> },
@@ -315,7 +319,7 @@ export function ExploreShowcase({
         <div style={{ maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start', padding: '4px 12px', borderRadius: '999px', background: 'rgba(217,255,0,0.1)', border: '1px solid rgba(217,255,0,0.28)' }}>
             <span className="live-dot" />
-            <span className="mono caption-3" style={{ color: 'var(--accent)' }}>OMNIVIRAL STUDIO OS v8.0 • 45+ AI TOOLS • 3D & BLENDER</span>
+            <span className="mono caption-3" style={{ color: 'var(--accent)' }}>OMNIVIRAL STUDIO OS v10.0 • GPU RENDER ENGINE • AGENT TWO • 60FPS MOTION</span>
           </div>
           <h1 className="heading-2" style={{ color: 'var(--text)' }}>
             Direct cinema grade AI videos, ads, and faceless channels on autopilot.

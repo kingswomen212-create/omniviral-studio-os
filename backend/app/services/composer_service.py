@@ -5,6 +5,7 @@ from typing import List, Dict, Any, Optional
 from app.core.config import OUTPUT_DIR, MUSIC_DIR
 from app.services.visual_service import VisualService
 from app.services.audio_engine import AudioEngine
+from app.services.motion_gfx_engine import MotionGraphicsEngine
 
 COLOR_LUT_FILTERS = {
     "teal_orange": "colorbalance=rs=.07:bs=-.07:rh=.11:bh=-.09,eq=contrast=1.14:saturation=1.22,unsharp=5:5:0.7",
@@ -175,15 +176,36 @@ class ComposerService:
             )
             last_v = "vbar"
 
-        # 7. Cinema Hook Title Card (eased fade-in during first 2.8s)
+        next_in_idx = audio_idx + 1
+        hook_png_path = None
+        # 7. Studio Vector Floating Pill Hook Card (v9.0 anti-aliased rounded pill + Gaussian shadow!)
         if hook_text:
-            safe_hook = hook_text.replace("'", "").replace(":", " -").replace("%", "pct")[:38].upper()
-            h_font = int(w * 0.048)
-            filter_parts.append(
-                f"[{last_v}]drawtext=text='{safe_hook}':fontcolor=0xD9FF00:fontsize={h_font}:borderw=4:bordercolor=black:"
-                f"box=1:boxcolor=0x050507@0.85:boxborderw=18:x=(w-text_w)/2:y={int(h*0.16)}:enable='between(t,0.1,2.8)'[vhook]"
-            )
-            last_v = "vhook"
+            try:
+                hook_png_path = OUTPUT_DIR / f"hook_pill_{output_filename}.png"
+                MotionGraphicsEngine.render_hook_pill_png(
+                    text=hook_text[:36].upper(),
+                    out_path=hook_png_path,
+                    accent_hex="#D9FF00",
+                    theme_id="oled_volt",
+                    icon="sparkle",
+                    font_size=max(26, int(w * 0.034)),
+                )
+                cmd.extend(["-i", str(hook_png_path)])
+                hk_idx = next_in_idx
+                next_in_idx += 1
+                target_y = int(h * 0.13)
+                filter_parts.append(
+                    f"[{last_v}][{hk_idx}:v]overlay=x=(W-w)/2:y='min({target_y},-140+1500*max(0,t-0.1))':enable='between(t,0.1,3.0)'[vhook]"
+                )
+                last_v = "vhook"
+            except Exception:
+                safe_hook = hook_text.replace("'", "").replace(":", " -").replace("%", "pct")[:38].upper()
+                h_font = int(w * 0.048)
+                filter_parts.append(
+                    f"[{last_v}]drawtext=text='{safe_hook}':fontcolor=0xD9FF00:fontsize={h_font}:borderw=4:bordercolor=black:"
+                    f"box=1:boxcolor=0x050507@0.85:boxborderw=18:x=(w-text_w)/2:y={int(h*0.16)}:enable='between(t,0.1,2.8)'[vhook]"
+                )
+                last_v = "vhook"
 
         # 8. Brand Watermark
         if watermark and watermark.strip():
@@ -204,12 +226,11 @@ class ComposerService:
         # 10. Optional 4K UHD Upscale Mastering Pass
         if render_quality == "4k_uhd":
             w4k, h4k = w * 2, h * 2
-            filter_parts.append(f"[{last_v}]scale={w4k}:{h4k}:flags=lanczos,unsharp=5:5:0.75[vout]")
+            filter_parts.append(f"[{last_v}]hqdn3d=1.2:1.2:4:4,scale={w4k}:{h4k}:flags=lanczos+accurate_rnd,cas=0.60,deband[vout]")
         else:
-            filter_parts.append(f"[{last_v}]null[vout]")
+            filter_parts.append(f"[{last_v}]deband,cas=0.42[vout]")
 
         # 11. Broadcast Audio Mastering (Sidechain Ducking + Transition Whoosh SFX + -14 LUFS Loudnorm)
-        next_in_idx = audio_idx + 1
         audio_mix_labels = ["[voice_main]"]
         filter_parts.append(f"[{audio_idx}:a]aformat=sample_rates=44100:channel_layouts=stereo,asplit=2[voice_main][voice_sc]")
 
@@ -261,13 +282,15 @@ class ComposerService:
         cmd.extend([
             "-filter_complex", filter_complex,
             "-map", "[vout]", "-map", "[aout]",
-            "-c:v", "libx264", "-preset", "fast", "-crf", crf_val, "-pix_fmt", "yuv420p",
-            "-c:a", "aac", "-b:a", "256k",
+            "-c:v", "libx264", "-profile:v", "high", "-preset", "fast", "-crf", crf_val, "-pix_fmt", "yuv420p", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-movflags", "+faststart", "-threads", "0",
+            "-c:a", "aac", "-ar", "48000", "-b:a", "256k",
             "-t", str(total_duration),
             str(final_path)
         ])
 
         process = subprocess.run(cmd, capture_output=True, text=True)
+        if hook_png_path:
+            hook_png_path.unlink(missing_ok=True)
         if process.returncode != 0:
             print(f"FFmpeg Composer error: {process.stderr}")
             raise RuntimeError(f"FFmpeg failed: {process.stderr[-600:]}")

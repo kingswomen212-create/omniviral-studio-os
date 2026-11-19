@@ -1,57 +1,48 @@
-# OmniViral Studio OS v8.0
+# OmniViral Studio OS v10.0
 
-**All-in-One Zero-Cost (`$0.00/render`) AI Cinema Studio, HyperFrames 60fps Motion Graphics, Autonomous Agents, CapCut/HeyGen/Eromify Tools, Envato Creative Assets, Chat-to-3D Blender Studio & Interactive 3D Web Builder.**
+**All-in-One Zero-Cost (`$0.00/render`) GPU-Accelerated AI Cinema Render Engine, Agent Two Multi-Agent Director, 60fps Commercial Motion Graphics Studio, HyperFrames, Envato Assets & 3D Blender/Web OS.**
 
-Built with **FastAPI**, **Next.js 14**, **FFmpeg 7.1**, **Edge-TTS (318 neural voices)**, **Openverse 800M+ HD visuals**, **Blender 4.x `bpy` Cycles**, **SQLite persistence**, and a **WCAG 2.2 AAA verified OLED Cinema Design System** (`Geist` + `Geist Mono`).
+Built with **FastAPI**, **Next.js 14**, **FFmpeg 7.1 (Hardware GPU AMF/MF + AMD FidelityFX CAS + Deband + Optical Halation + BT.709 + 48kHz)**, **Pillow 2× SSAA Vector Graphics Engine**, **Edge-TTS (318 neural voices)**, **Openverse 800M+ HD visuals**, **Blender 4.x `bpy` Cycles**, **SQLite persistence**, and a **WCAG 2.2 AAA OLED Cinema Design System** (`Geist` + `Geist Mono`).
 
 ---
 
 ## Core Suites & Capabilities
 
-### 1. Video, Cinema & HyperFrames 60fps Motion Graphics Studio
-- **Deterministic Camera Rigs**: *Dolly In, Crash Zoom, Dolly Out, Pan Left, Pan Right, Handheld FPV, Orbit Drift*
-- **Camera Body & Lens Optics**: *ARRI Alexa 35, 35mm Kodak, 8mm Super, VHS Hi8* + *35mm Prime, Anamorphic 2.39, Halation Glow*
-- **Cinema Color LUTs**: *Teal & Orange, Moody A24, Film Noir, Cyber Neon, Kodak 2383, Bleach Grit*
-- **Broadcast Audio Mastering**: FFmpeg `sidechaincompress` music ducking, `-14 LUFS loudnorm`, synthesized transition Whoosh SFX, 6 royalty-free moods, and custom MP3 upload
-- **3 Render Quality Tiers**: `1080p_30` (Fast), `1080p_60` (HyperFrames 60fps), and `4k_uhd` (`2160x3840` / `3840x2160`)
-- **HyperFrames Motion Studio**: 60fps Kinetic Typography, Animated Stat Counter, Product Launch Reveal & Social Hook cards
-- **All 24 AI Video Generators & Script-to-Video AI**: Full AITuber-inspired niche generator directory, 10 art styles, Global Voice Flag Chips, and AI Lyric Video Maker
+### 1. GPU Cinema Render Engine & Agent Two Multi-Agent Director (v10.0)
+- **Hardware GPU Acceleration**: Auto-detects verified GPU encoders (`h264_amf`, `h264_mf`, `h264_nvenc`, `h264_qsv`) + multi-threaded parallel `ThreadPoolExecutor` scene pre-rendering and live 1080p speed benchmarking (`POST /api/engine/benchmark`).
+- **5-Agent Cinema Pipeline (`POST /api/engine/agent-two`)**: *01 Context & Prompt Director → 02 Casting & Parallel Asset Production → 03 3×3 Shot-to-Shot Continuity Storyboard Contact Sheet → 04 Parallel GPU Cinema Render (24p/30p/60p, Optical Film Halation Bloom, 180° Shutter Motion Blur, FidelityFX CAS, Deband, BT.709, 48kHz -14 LUFS) → 05 Self-Review & Auto-Correction QA Scorecard*.
+- **7 Production Use Cases**: *Ad Filmmaking, Performance Marketing, Theatrical Filmmaking, Micro-Drama (A24), AI UGC, AI VFX (60fps), Pre-Viz*.
+- **Topaz / ByteDance-Class Pro Super-Resolution (`POST /api/engine/upscale-pro`)**: Local 2× FidelityFX CAS detail restoration, 4K UHD mastering, 60fps bidirectional optical-flow interpolation (`minterpolate`), and dual-path optical film halation remastering with before/after telemetry.
+- **Multi-Model Routing Matrix**: `$0.00` Local GPU Engine active defaults + pluggable BYOK slots across Video, Image, Audio, Music & Upscalers.
 
-### 2. Autonomous Agents, Clipping, Avatars & CapCut Studio (v7.0)
-- **Clipping Agent (Eromify-style)**: Long video in -> viral 9:16 captioned clips out
-- **Autonomous Video Agent & Photo Avatar (HeyGen-style)**: Single prompt to full multi-scene video + talking avatar compositor
-- **AI Video Podcast Studio**: Dual-host alternating neural voices & split waveform visuals
-- **PPT / Slides to Video & Video Translate/Dub**: Slide deck narration + 9-language translation & dubbing
-- **CapCut Creative Utilities**: AI Logo Generator (SVG + PNG), Remove Background (Transparent PNG), Meme Maker, and Convert/Compress MP4
+### 2. Commercial Motion Graphics & Studio Effects Engine (v9.0)
+- **60fps Vector Commercial Ad Builder (`POST /api/motion/render`)**: Supersampled `2×` Pillow vector engine piped directly into FFmpeg for Google Ads / Apple Keynote-grade motion graphics:
+  - Floating 3D studio hero with dynamic breathing ground contact shadow
+  - Spring-bouncing elevated pill badges (`SALE`, `25% OFF`, `Next day delivery`, `PRICE DROP`, 5-Star gold rating) with real multi-layer Gaussian drop shadows
+  - Sliding product card carousel & orbital multi-channel ring arc
+  - Live typing Search Bar card, gliding pointer cursor + click ripple, stylized Vector Map card with bouncing location pin & overlapping circular portrait avatar
+  - Morphing 4-point concave Bezier AI Sparkle finale + staggered typewriter CTA + synchronized UI pop/click foley
+- **Live 60fps Interactive Canvas Preview** + **Studio Graphic Overlay Enhancer (`POST /api/motion/apply-overlay`)** to stamp shadowed floating pills onto any video (and automatically integrated into `ComposerService` hook banners!).
 
-### 3. Envato Creative Asset Toolkit, Chat-to-3D Blender & Interactive 3D Web Builder (v8.0)
-- **Chat-to-3D Blender Studio**: Interactive 360-degree drag-to-orbit 3D viewport + downloadable **Blender 4.x `bpy` Cycles** Python scripts (`.py`) generated from natural language prompts
-- **Interactive 3D Website Builder**: Generate standalone, mouse-reactive 3D landing pages (`.html`) with live sandboxed preview and instant download
-- **60fps Video Templates & Motion Graphics**: *Logo Reveal, Lower Third, Breaking News Stinger, Trailer Title, VJ Loop, Infographic* rendered directly to MP4 with synchronized SFX
-- **10-Sound Royalty-Free SFX Soundboard**: FFmpeg-synthesized *Whoosh, Impact Boom, Sub Riser, UI Click, Social Pop, Retro Coin, Sci-Fi Laser, Breaking News Stinger, Glitch Static, Midnight Rain*
-- **Stock Asset Explorer & Graphics Generator**: Live Openverse 800M+ HD asset search plus Mesh Gradients, Film Dust Overlays, 1200x630 Social Banners & Color Palette Cards
+### 3. Envato Creative Assets, Chat-to-3D Blender & Interactive 3D Web (v8.0)
+- **Chat-to-3D Blender Studio**: Interactive 360° drag-to-orbit viewport + executable **Blender 4.x `bpy` Cycles** `.py` export
+- **Interactive 3D Website Builder**: Standalone mouse-reactive 3D `.html` landing pages with live preview
+- **60fps Video Templates**, **10-Sound Royalty-Free SFX Soundboard**, **800M+ HD Openverse Stock Explorer**, and **Graphics/Banners Generator**
 
-### 4. Image Suite, Audio Suite, MCP Server & CLI
-- **Image Suite**: Create Image, Edit Image, 4K Image Upscaler, Soul ID & AI Influencer Vault, and 3-panel Mangaka Studio
-- **Audio Suite**: 318 Edge-TTS neural voices, 6-preset AI Voice Changer, Global Translate & Dub, and Music Visualizer
-- **Native MCP Server & CLI**: JSON-RPC 2.0 MCP Server ([`backend/mcp_server.py`](backend/mcp_server.py)) + Headless CLI ([`backend/omniviral_cli.py`](backend/omniviral_cli.py))
+### 4. Cinema Studio, HyperFrames, Clipping Agent, Avatars, Image/Audio & MCP (v5.0–v7.0)
+- **Cinema & HyperFrames Studio**: 7 camera rigs, 4 camera bodies, 3 lens optics, 6 LUTs, 24 niche generators, Script-to-Video AI, 10 art styles, Lyric Video Maker
+- **Autonomous Agents & CapCut/HeyGen/Eromify Tools**: Clipping Agent, Autonomous Video Agent, Photo Avatar, Dual-Host AI Video Podcast, PPT-to-Video, Video Translate & Dub, AI Logo (SVG+PNG), Remove BG, Meme Maker, MP4 Compress
+- **Image/Audio Suites & Native MCP Server**: 318 Edge-TTS voices, Voice Changer, Soul ID Vault, Mangaka Studio, JSON-RPC 2.0 MCP Server ([`backend/mcp_server.py`](backend/mcp_server.py)) + CLI ([`backend/omniviral_cli.py`](backend/omniviral_cli.py))
 
 ---
 
 ## Quick Start
-
-### Windows 1-Click
-Double-click `start_all.bat`, then open:
-- **Studio UI**: `http://localhost:3000` (press `Ctrl+K` for Command Palette)
-- **API Docs**: `http://127.0.0.1:8000/docs`
-
-### Manual Setup
 ```bash
 # Backend
 cd backend
 python -m venv venv
 venv\Scripts\activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 # Frontend
@@ -60,10 +51,4 @@ npm install
 npm run build
 npm run start -- -p 3000
 ```
-
----
-
-## Design System & Accessibility
-- Formal tokens defined in [`frontend/design/tokens.json`](frontend/design/tokens.json)
-- Verified WCAG 2.2 AA/AAA contrast (`14/14` pairs pass AA, `12/12` text pairs pass AAA)
-- Full keyboard navigation (`Ctrl+K` Command Palette, visible focus rings, `role="switch"`, `prefers-reduced-motion`)
+Open **Studio UI**: `http://localhost:3000` (press `Ctrl+K` for Command Palette) | **API Docs**: `http://127.0.0.1:8000/docs`
