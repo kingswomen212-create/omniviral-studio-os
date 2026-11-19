@@ -13,6 +13,9 @@ import {
   CheckCircle2,
   Clapperboard,
   Sliders,
+  KeyRound,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import { DotGridLoader } from './ui/StudioPrimitives';
 
@@ -32,13 +35,13 @@ interface Props {
 }
 
 const USE_CASES = [
-  { id: 'ad_filmmaking', name: 'Ad Filmmaking', tag: '24FPS LUXURY', desc: 'Golden-hour brand campaign with optical halation & editorial typography.' },
+  { id: 'ad_filmmaking', name: 'Ad Filmmaking', tag: '24FPS LUXURY', desc: 'Golden-hour brand campaign with optical halation & wide-tracked editorial typography.' },
   { id: 'performance_marketing', name: 'Performance Marketing', tag: 'HIGH-ROAS', desc: 'Crisp high-contrast commercial pacing built for Meta, TikTok & YouTube Ads.' },
   { id: 'filmmaking', name: 'Theatrical Filmmaking', tag: 'ANAMORPHIC', desc: 'Kodak 2383 24fps film cadence, subtle grain & cinema letterbox bars.' },
   { id: 'micro_drama', name: 'Micro-Drama Series', tag: 'MOODY A24', desc: 'Atmospheric vertical drama with sculpted shadows & deep cinematic tone.' },
   { id: 'ai_ugc', name: 'AI UGC & Creator', tag: '30FPS REAL', desc: 'Daylight editorial portrait pacing tailored for UGC & product trial rooms.' },
-  { id: 'ai_vfx', name: 'AI VFX & Sci-Fi', tag: '60FPS NEON', desc: 'High-frame-rate neon split-tone VFX spectacle with FidelityFX CAS 0.65.' },
-  { id: 'pre_viz', name: 'Director Pre-Viz', tag: 'STORYBOARD', desc: 'Rapid production design & 3x3 continuity contact sheet + animatic.' },
+  { id: 'ai_vfx', name: 'AI VFX & Sci-Fi', tag: '60FPS NEON', desc: 'High-frame-rate neon split-tone VFX spectacle with FidelityFX CAS 0.62.' },
+  { id: 'pre_viz', name: 'Director Pre-Viz', tag: 'STORYBOARD', desc: 'Rapid production design & continuity contact sheet + animatic.' },
 ];
 
 const MASTER_GRADES = [
@@ -70,7 +73,7 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
   const [benchRes, setBenchRes] = useState<any>(null);
 
   // Agent Two Controls
-  const [brief, setBrief] = useState('Luxury botanical fragrance launch bathed in golden hour sunlight with dew-kissed glass bottle');
+  const [brief, setBrief] = useState('Luxury botanical fragrance glass bottle in golden hour sunlight with flowing silk');
   const [brandName, setBrandName] = useState('AETHER LUXE');
   const [useCase, setUseCase] = useState('ad_filmmaking');
   const [aspectRatio, setAspectRatio] = useState('9:16');
@@ -82,6 +85,17 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
   const [enableHalation, setEnableHalation] = useState(true);
   const [enableMotionBlur, setEnableMotionBlur] = useState(true);
   const [selectedVideoModel, setSelectedVideoModel] = useState('omniviral_cinema_v10');
+  const [customClips, setCustomClips] = useState<{ filename: string; label: string }[]>([]);
+
+  // Provider Keys Vault
+  const [pexelsKey, setPexelsKey] = useState('');
+  const [pixabayKey, setPixabayKey] = useState('');
+  const [hfToken, setHfToken] = useState('');
+  const [falKey, setFalKey] = useState('');
+  const [repToken, setRepToken] = useState('');
+  const [geminiKey, setGeminiKey] = useState('');
+  const [comfyUrl, setComfyUrl] = useState('');
+  const [savingKeys, setSavingKeys] = useState(false);
 
   // Agent Two Result
   const [rendering, setRendering] = useState(false);
@@ -93,10 +107,26 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
   const [upscaling, setUpscaling] = useState(false);
   const [upscaleOut, setUpscaleOut] = useState<any>(null);
 
-  useEffect(() => {
+  const loadCaps = () => {
     fetch(`${apiBase}/engine/capabilities`)
       .then((r) => r.json())
       .then((d) => setCaps(d))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadCaps();
+    fetch(`${apiBase}/schedule/settings`)
+      .then((r) => r.json())
+      .then((s) => {
+        if (s.pexels_api_key) setPexelsKey(s.pexels_api_key);
+        if (s.pixabay_api_key) setPixabayKey(s.pixabay_api_key);
+        if (s.hf_api_token) setHfToken(s.hf_api_token);
+        if (s.fal_api_key) setFalKey(s.fal_api_key);
+        if (s.replicate_api_token) setRepToken(s.replicate_api_token);
+        if (s.gemini_api_key) setGeminiKey(s.gemini_api_key);
+        if (s.comfyui_url) setComfyUrl(s.comfyui_url);
+      })
       .catch(() => {});
   }, [apiBase]);
 
@@ -120,6 +150,54 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
     }
   };
 
+  const handleUploadAgentClips = async (files: FileList) => {
+    const uploaded: { filename: string; label: string }[] = [];
+    for (let i = 0; i < Math.min(files.length, 6); i++) {
+      const fd = new FormData();
+      fd.append('file', files[i]);
+      try {
+        const r = await fetch(`${apiBase}/engine/upload-video`, { method: 'POST', body: fd });
+        const d = await r.json();
+        if (r.ok && d.filename) {
+          uploaded.push({ filename: d.filename, label: files[i].name });
+        }
+      } catch {
+        // skip
+      }
+    }
+    if (uploaded.length > 0) {
+      setCustomClips((prev) => [...prev, ...uploaded].slice(0, 6));
+      onNotify('success', `Attached ${uploaded.length} real video clip(s) to Agent Two timeline`);
+    }
+  };
+
+  const saveProviderKeys = async () => {
+    setSavingKeys(true);
+    try {
+      const r = await fetch(`${apiBase}/engine/providers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pexels_api_key: pexelsKey,
+          pixabay_api_key: pixabayKey,
+          hf_api_token: hfToken,
+          fal_api_key: falKey,
+          replicate_api_token: repToken,
+          gemini_api_key: geminiKey,
+          comfyui_url: comfyUrl,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error('Save failed');
+      setCaps((prev: any) => (prev ? { ...prev, media_providers: d.media_providers, models: d.models } : prev));
+      onNotify('success', `Saved & activated providers: ${d.media_providers?.active_label || 'OK'}`);
+    } catch {
+      onNotify('error', 'Failed to save provider keys');
+    } finally {
+      setSavingKeys(false);
+    }
+  };
+
   const runAgentTwo = async () => {
     setRendering(true);
     setAgentOut(null);
@@ -140,13 +218,14 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
           enable_halation: enableHalation,
           enable_motion_blur: enableMotionBlur,
           model_profile: selectedVideoModel,
+          custom_clip_filenames: customClips.map((c) => c.filename),
         }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || 'Agent Two render failed');
       setAgentOut(d);
       onMediaCreated(d);
-      onNotify('success', `Agent Two mastered ${d.filename} (QA ${d.qa_report?.grade || 'A'} • ${d.render_seconds}s)`);
+      onNotify('success', `Agent Two mastered ${d.filename} (${d.real_video_shots}/5 real video shots • QA ${d.qa_report?.grade})`);
     } catch (err: any) {
       onNotify('error', err.message || 'Agent Two production failed');
     } finally {
@@ -154,7 +233,7 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
     }
   };
 
-  const handleUploadVideo = async (file: File) => {
+  const handleUploadRemasterVideo = async (file: File) => {
     const fd = new FormData();
     fd.append('file', file);
     try {
@@ -212,6 +291,8 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
   };
 
   const baseHost = apiBase.replace('/api', '');
+  const activeTier = caps?.media_providers?.active_tier || 'curated_zero_key_photo';
+  const hasRealVideoProvider = activeTier === 'ai_video_diffusion' || activeTier === 'real_4k_stock_video' || activeTier === 'local_cinema_vault' || customClips.length > 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -221,14 +302,14 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
               <h2 className="heading-5" style={{ color: 'var(--text)', margin: 0 }}>
-                Cinema Render Engine v10.0 & Agent Two Director
+                Cinema Render Engine v11.0 & Real Video Diffusion Studio
               </h2>
               <span className="mono caption-3" style={{ background: 'var(--accent)', color: 'var(--on-accent)', padding: '3px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                <Cpu size={12} /> GPU HARDWARE + FIDELITYFX CAS + BT.709
+                <Cpu size={12} /> GPU + REAL VIDEO DIFFUSION + 4K FOOTAGE
               </span>
             </div>
-            <p className="body-5" style={{ margin: 0, maxWidth: '820px' }}>
-              Multi-agent cinema orchestration (Context, Casting, 3x3 Continuity Storyboard, Parallel GPU Render, Self-Review QA), ByteDance/Topaz-class CAS Super-Resolution, Optical Film Halation & 48kHz broadcast audio at $0.00.
+            <p className="body-5" style={{ margin: 0, maxWidth: '840px' }}>
+              Native real-video assembly supporting Seedance/Kling/Wan/MiniMax (fal.ai & Replicate), free 4K moving video (Pexels & Pixabay), FLUX.1 studio generation, custom footage uploads, 2x supersampled high-fashion typography, and GPU BT.709 mastering.
             </p>
           </div>
 
@@ -240,13 +321,56 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
               <Maximize2 size={14} /> Pro Super-Resolution
             </button>
             <button type="button" onClick={() => setSubTab('models')} className={`pill-btn ${subTab === 'models' ? 'active' : ''}`} style={{ padding: '10px 14px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <Layers size={14} /> Model Hub
+              <KeyRound size={14} /> Real Video Models & Keys
             </button>
           </div>
         </div>
 
+        {/* Honest Active Footage / AI Diffusion Source Status Strip */}
+        <div
+          style={{
+            padding: '12px 16px',
+            borderRadius: '12px',
+            background: hasRealVideoProvider ? 'rgba(217,255,0,0.08)' : 'rgba(245,158,11,0.10)',
+            border: hasRealVideoProvider ? '1px solid rgba(217,255,0,0.35)' : '1px solid rgba(245,158,11,0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {hasRealVideoProvider ? (
+              <CheckCircle2 size={18} color="var(--accent)" />
+            ) : (
+              <AlertTriangle size={18} color="#F59E0B" />
+            )}
+            <div>
+              <div className="caption-3" style={{ color: 'var(--text)', fontWeight: 600 }}>
+                {customClips.length > 0
+                  ? `Custom Real Video Mode Active (${customClips.length} real moving clip(s) attached)`
+                  : caps?.media_providers?.active_label || 'Checking configured video providers...'}
+              </div>
+              {!hasRealVideoProvider && (
+                <div className="caption-4" style={{ fontSize: '12px', marginTop: '2px' }}>
+                  For true InVideo-grade moving footage (not still photos), drop real MP4 clips below OR add a free 30-second Pexels/Pixabay 4K Video key or fal.ai (Seedance/Kling) key.
+                </div>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSubTab('models')}
+            className="volt-btn"
+            style={{ padding: '8px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
+          >
+            <KeyRound size={13} /> Connect Real Video Providers
+          </button>
+        </div>
+
         {/* Live Hardware Telemetry Strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr) auto', gap: '12px', paddingTop: '14px', borderTop: '1px solid var(--border)', alignItems: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr) auto', gap: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)', alignItems: 'center' }}>
           <div>
             <div className="mono caption-4">HARDWARE GPU ENCODER</div>
             <div className="title-4" style={{ color: 'var(--accent)', marginTop: '2px' }}>
@@ -266,9 +390,9 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
             </div>
           </div>
           <div>
-            <div className="mono caption-4">COLOR & AUDIO SPEC</div>
+            <div className="mono caption-4">TYPOGRAPHY & AUDIO</div>
             <div className="title-4" style={{ color: 'var(--text)', marginTop: '2px' }}>
-              BT.709 FastStart • 48kHz -14 LUFS
+              2x SSAA Editorial • 48kHz -14 LUFS
             </div>
           </div>
           <button
@@ -279,12 +403,12 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
             style={{ padding: '9px 14px', fontSize: '12px', color: 'var(--text)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
             <Gauge size={14} color="var(--accent)" />
-            {benchLoading ? 'Benchmarking...' : 'Run 1080p Benchmark'}
+            {benchLoading ? 'Benchmarking...' : '1080p Benchmark'}
           </button>
         </div>
 
         {benchRes && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', paddingTop: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', paddingTop: '8px' }}>
             {benchRes.results.map((r: any) => (
               <div key={r.mode} className="camera-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
@@ -305,7 +429,7 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
             {/* Use Case Grid */}
             <div className="glass-panel" style={{ padding: '18px' }}>
               <div className="mono caption-3" style={{ color: 'var(--accent)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Film size={14} /> 01 / PRODUCTION USE CASE (INVIDEO AGENT TWO WORKFLOWS)
+                <Film size={14} /> 01 / PRODUCTION USE CASE
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
                 {USE_CASES.map((uc) => (
@@ -331,26 +455,53 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Brief & Cinema Mastering Specs */}
+            {/* Brief, Real Video Clips Dropzone & Mastering Specs */}
             <div className="glass-panel" style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div className="mono caption-3" style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Sliders size={14} /> 02 / CREATIVE BRIEF, CINEMA GRADE & GPU ENCODER
+                <Sliders size={14} /> 02 / CREATIVE BRIEF, REAL VIDEO FOOTAGE & CINEMA GRADE
               </div>
 
               <div>
-                <label style={lblStyle}>Director Creative Brief (Context & Continuity Prompt)</label>
+                <label style={lblStyle}>Director Creative Brief (Prompt for Seedance / Kling / 4K Stock Video / FLUX)</label>
                 <textarea
                   className="studio-input"
-                  rows={3}
+                  rows={2}
                   value={brief}
                   onChange={(e) => setBrief(e.target.value)}
-                  placeholder="Describe your brand campaign, product hero, micro-drama plot, or film vision..."
                 />
+              </div>
+
+              {/* Direct Real Moving Video Clips Uploader */}
+              <div className="camera-card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                  <div>
+                    <div className="caption-3" style={{ color: 'var(--text)' }}>Optional: Drop Real Moving Video Clips (MP4 / WebM / MOV)</div>
+                    <div className="caption-4" style={{ fontSize: '11px' }}>
+                      Agent Two auto-cuts your real footage to the beat, grades with Halation + CAS & renders 2x SSAA editorial typography.
+                    </div>
+                  </div>
+                  <label className="pill-btn" style={{ padding: '8px 12px', fontSize: '12px', cursor: 'pointer', color: 'var(--text)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <Upload size={13} color="var(--accent)" /> Attach Video Clips
+                    <input type="file" accept="video/*,image/*" multiple style={{ display: 'none' }} onChange={(e) => e.target.files && handleUploadAgentClips(e.target.files)} />
+                  </label>
+                </div>
+                {customClips.length > 0 && (
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {customClips.map((c, idx) => (
+                      <span key={c.filename} className="mono" style={{ fontSize: '11px', background: 'rgba(217,255,0,0.12)', border: '1px solid rgba(217,255,0,0.35)', color: 'var(--text)', padding: '4px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        #{idx + 1} {c.label.slice(0, 22)}
+                        <button type="button" onClick={() => setCustomClips((prev) => prev.filter((x) => x.filename !== c.filename))} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, display: 'inline-flex' }}>
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={lblStyle}>Brand / Studio Name</label>
+                  <label style={lblStyle}>Brand Name (Subtle Top-Right Mark + Editorial Title)</label>
                   <input className="studio-input" value={brandName} onChange={(e) => setBrandName(e.target.value)} />
                 </div>
                 <div>
@@ -400,10 +551,10 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
                 <div>
                   <label style={lblStyle}>Typography / Caption Mode</label>
                   <select className="studio-input" value={captionStyle} onChange={(e) => setCaptionStyle(e.target.value)}>
-                    <option value="editorial">Editorial Minimalist Luxury (Clean Center)</option>
+                    <option value="editorial">2x SSAA Luxury Editorial Typography (Tracked White)</option>
                     <option value="volt_lime">Volt Lime Word-by-Word Viral</option>
                     <option value="hormozi">Hormozi Gold Pop</option>
-                    <option value="none">Clean Film (No Captions)</option>
+                    <option value="none">Pure Cinema (Zero Text)</option>
                   </select>
                 </div>
                 <div>
@@ -439,12 +590,12 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
                 style={{ width: '100%', minHeight: '48px', fontSize: '14px', justifyContent: 'center' }}
               >
                 <Zap size={16} fill="var(--on-accent)" />
-                {rendering ? 'Running 5-Agent Parallel Cinema Render Pipeline...' : 'Launch Agent Two Multi-Agent Production ($0.00)'}
+                {rendering ? 'Running 5-Agent Cinema Render Pipeline...' : 'Launch Agent Two Cinema Production'}
               </button>
             </div>
           </div>
 
-          {/* RIGHT: 5-Agent Trace, 3x3 Storyboard Sheet, Mastered Video & Self-Review QA */}
+          {/* RIGHT: Output, Media Source Audit, 3x3 Storyboard & QA Scorecard */}
           <div className="glass-panel" style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className="mono caption-3" style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>PRODUCTION OUTPUT & QA INSPECTOR</span>
@@ -459,7 +610,7 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
               <div style={{ padding: '64px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', textAlign: 'center' }}>
                 <DotGridLoader />
                 <div className="mono caption-4">
-                  Orchestrating Context → Casting → 3x3 Continuity Storyboard → Parallel GPU Render ({fps}fps BT.709) → Self-Review QA...
+                  Acquiring cinema media → building continuity sheet → rendering parallel {fps}fps GPU shots with 2x SSAA typography & Halation...
                 </div>
               </div>
             ) : agentOut ? (
@@ -473,30 +624,30 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
                   style={{ width: '100%', maxHeight: '440px', borderRadius: '12px', background: '#000', border: '1px solid var(--border)' }}
                 />
 
+                {agentOut.media_sources && (
+                  <div className="mono caption-4" style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)' }}>
+                    FOOTAGE SOURCE: <strong style={{ color: 'var(--accent)' }}>{agentOut.media_sources.join(' • ')}</strong> ({agentOut.real_video_shots}/5 moving video clips)
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <a href={`${baseHost}${agentOut.url}`} download={agentOut.filename} className="volt-btn" style={{ padding: '8px 14px', fontSize: '12px', textDecoration: 'none' }}>
                     <Download size={14} /> Download Master MP4
                   </a>
                   {agentOut.storyboard_url && (
                     <a href={`${baseHost}${agentOut.storyboard_url}`} download={agentOut.storyboard_filename} className="pill-btn" style={{ padding: '8px 14px', fontSize: '12px', textDecoration: 'none', color: 'var(--text)' }}>
-                      <Download size={14} /> Download 3x3 Storyboard
+                      <Download size={14} /> Download Storyboard
                     </a>
                   )}
                 </div>
 
-                {/* 3x3 Continuity Storyboard Sheet Preview */}
                 {agentOut.storyboard_url && (
                   <div>
-                    <div className="mono caption-4" style={{ marginBottom: '6px' }}>SHOT-TO-SHOT CONTINUITY STORYBOARD</div>
-                    <img
-                      src={`${baseHost}${agentOut.storyboard_url}`}
-                      alt="Continuity Storyboard Contact Sheet"
-                      style={{ width: '100%', borderRadius: '10px', border: '1px solid var(--border)' }}
-                    />
+                    <div className="mono caption-4" style={{ marginBottom: '6px' }}>CONTINUITY STORYBOARD</div>
+                    <img src={`${baseHost}${agentOut.storyboard_url}`} alt="Continuity Storyboard" style={{ width: '100%', borderRadius: '10px', border: '1px solid var(--border)' }} />
                   </div>
                 )}
 
-                {/* 5-Agent Pipeline Trace */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div className="mono caption-4">5-AGENT EXECUTION TRACE ({agentOut.render_seconds}s total)</div>
                   {agentOut.agent_trace?.map((st: any) => (
@@ -510,7 +661,6 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
                   ))}
                 </div>
 
-                {/* Self-Review QA Checks */}
                 {agentOut.qa_report?.checks && (
                   <div className="camera-card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div className="mono caption-3" style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -527,9 +677,9 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
             ) : (
               <div style={{ padding: '64px 20px', textAlign: 'center', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                 <Sparkles size={30} color="var(--accent)" />
-                <div className="title-4" style={{ color: 'var(--text)' }}>Ready for Multi-Agent Cinema Production</div>
-                <span className="caption-4" style={{ maxWidth: '340px' }}>
-                  Click Launch to execute all 5 agents in parallel, build a 3x3 continuity storyboard sheet, render with GPU + Halation + CAS + BT.709, and run automated Self-Review QA.
+                <div className="title-4" style={{ color: 'var(--text)' }}>Ready for Real-Video Cinema Production</div>
+                <span className="caption-4" style={{ maxWidth: '360px' }}>
+                  Attach real video clips above or connect Pexels Free 4K Video / fal.ai Seedance & Kling in the Models tab to generate genuine moving cinema films.
                 </span>
               </div>
             )}
@@ -537,7 +687,7 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
         </div>
       )}
 
-      {/* TAB 2: TOPAZ / BYTEDANCE-CLASS PRO SUPER-RESOLUTION UPSCALER */}
+      {/* TAB 2: PRO SUPER-RESOLUTION UPSCALER */}
       {subTab === 'upscale' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(360px, 1fr)', gap: '20px', alignItems: 'start' }}>
           <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -565,7 +715,7 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
               </div>
               <label className="pill-btn" style={{ padding: '10px 14px', fontSize: '12px', cursor: 'pointer', color: 'var(--text)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 <Upload size={14} color="var(--accent)" /> Upload MP4/WebM
-                <input type="file" accept="video/*" style={{ display: 'none' }} onChange={(e) => e.target.files?.[0] && handleUploadVideo(e.target.files[0])} />
+                <input type="file" accept="video/*" style={{ display: 'none' }} onChange={(e) => e.target.files?.[0] && handleUploadRemasterVideo(e.target.files[0])} />
               </label>
             </div>
 
@@ -641,51 +791,91 @@ export const RenderEngineAgentStudio: React.FC<Props> = ({
         </div>
       )}
 
-      {/* TAB 3: MODEL ROUTING HUB (INVIDEO-CLASS MULTI-MODEL MATRIX) */}
+      {/* TAB 3: REAL VIDEO DIFFUSION & 4K FOOTAGE PROVIDER KEYS + MODEL HUB */}
       {subTab === 'models' && (
-        <div className="glass-panel" style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          <div>
-            <h3 className="title-3" style={{ color: 'var(--text)', fontWeight: 700, margin: 0 }}>
-              Multi-Model Routing Matrix ($0.00 Local GPU Active + BYOK Ready)
-            </h3>
-            <p className="body-5" style={{ margin: '4px 0 0' }}>
-              All pipelines execute locally at $0.00/render by default using OmniViral Cinema v10, Openverse HD + Pillow 2x SSAA, Edge-TTS 318 Voices, and FidelityFX CAS Super-Resolution — with seamless pluggable BYOK slots.
-            </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div className="glass-panel" style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <h3 className="title-3" style={{ color: 'var(--text)', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <KeyRound size={18} color="var(--accent)" /> Connect Real Moving 4K Video & AI Video Diffusion Providers
+              </h3>
+              <p className="body-5" style={{ margin: '6px 0 0' }}>
+                Saved locally in SQLite (never sent anywhere else). Adding a <strong>FREE Pexels or Pixabay key</strong> instantly switches renders from still photos to real moving 4K cinema video footage. Adding a <strong>fal.ai / Replicate key</strong> activates real Seedance Pro, Kling 2.1, Wan 2.1 & MiniMax Hailuo generative video diffusion!
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+              <div>
+                <label style={lblStyle}>Pexels 4K Moving Video API Key (100% FREE — pexels.com/api)</label>
+                <input type="password" className="studio-input" value={pexelsKey} onChange={(e) => setPexelsKey(e.target.value)} placeholder="Paste free Pexels API key..." />
+              </div>
+              <div>
+                <label style={lblStyle}>Pixabay HD/4K Moving Video API Key (100% FREE — pixabay.com/api)</label>
+                <input type="password" className="studio-input" value={pixabayKey} onChange={(e) => setPixabayKey(e.target.value)} placeholder="Paste free Pixabay API key..." />
+              </div>
+              <div>
+                <label style={lblStyle}>HuggingFace Token for FLUX.1-schnell (FREE Tier — huggingface.co)</label>
+                <input type="password" className="studio-input" value={hfToken} onChange={(e) => setHfToken(e.target.value)} placeholder="hf_..." />
+              </div>
+              <div>
+                <label style={lblStyle}>fal.ai API Key (Real Seedance Pro / Kling 2.1 / Wan 2.1 / MiniMax)</label>
+                <input type="password" className="studio-input" value={falKey} onChange={(e) => setFalKey(e.target.value)} placeholder="Paste fal.ai key..." />
+              </div>
+              <div>
+                <label style={lblStyle}>Replicate API Token (Real Kling / MiniMax Video-01 / Wan 2.1)</label>
+                <input type="password" className="studio-input" value={repToken} onChange={(e) => setRepToken(e.target.value)} placeholder="r8_..." />
+              </div>
+              <div>
+                <label style={lblStyle}>Google Gemini API Key (Imagen 3 Studio Photography)</label>
+                <input type="password" className="studio-input" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} placeholder="AIza..." />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" disabled={savingKeys} onClick={saveProviderKeys} className="volt-btn" style={{ padding: '10px 22px', fontSize: '13px' }}>
+                <CheckCircle2 size={15} /> {savingKeys ? 'Saving...' : 'Save & Activate Real Video Providers'}
+              </button>
+            </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
-            {caps?.models &&
-              Object.entries(caps.models).map(([cat, list]: [string, any]) => (
-                <div key={cat} className="camera-card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div className="mono caption-3" style={{ color: 'var(--accent)', textTransform: 'uppercase' }}>{cat}</div>
-                  {list.map((m: any) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => {
-                        if (cat === 'video') setSelectedVideoModel(m.id);
-                        onNotify('success', `Selected ${m.name} (${m.cost})`);
-                      }}
-                      style={{
-                        textAlign: 'left',
-                        background: m.status === 'ACTIVE' ? 'rgba(217,255,0,0.08)' : 'rgba(255,255,255,0.02)',
-                        border: m.status === 'ACTIVE' ? '1px solid rgba(217,255,0,0.4)' : '1px solid var(--border)',
-                        borderRadius: '10px',
-                        padding: '10px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
-                        <span className="caption-3" style={{ color: 'var(--text)', fontSize: '12px' }}>{m.name}</span>
-                        <span className="mono" style={{ fontSize: '10px', color: m.status === 'ACTIVE' ? 'var(--accent)' : 'var(--text-muted)' }}>
-                          {m.cost}
-                        </span>
-                      </div>
-                      <div className="caption-4" style={{ fontSize: '11px', marginTop: '3px' }}>{m.spec}</div>
-                    </button>
-                  ))}
-                </div>
-              ))}
+          <div className="glass-panel" style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <h3 className="title-3" style={{ color: 'var(--text)', fontWeight: 700, margin: 0 }}>
+              Live Model Routing Matrix
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+              {caps?.models &&
+                Object.entries(caps.models).map(([cat, list]: [string, any]) => (
+                  <div key={cat} className="camera-card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div className="mono caption-3" style={{ color: 'var(--accent)', textTransform: 'uppercase' }}>{cat}</div>
+                    {list.map((m: any) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          if (cat === 'video') setSelectedVideoModel(m.id);
+                          onNotify('success', `Selected route: ${m.name}`);
+                        }}
+                        style={{
+                          textAlign: 'left',
+                          background: m.status === 'ACTIVE' ? 'rgba(217,255,0,0.08)' : 'rgba(255,255,255,0.02)',
+                          border: m.status === 'ACTIVE' ? '1px solid rgba(217,255,0,0.4)' : '1px solid var(--border)',
+                          borderRadius: '10px',
+                          padding: '10px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
+                          <span className="caption-3" style={{ color: 'var(--text)', fontSize: '12px' }}>{m.name}</span>
+                          <span className="mono" style={{ fontSize: '10px', color: m.status === 'ACTIVE' ? 'var(--accent)' : '#F59E0B' }}>
+                            {m.status}
+                          </span>
+                        </div>
+                        <div className="caption-4" style={{ fontSize: '11px', marginTop: '3px' }}>{m.spec}</div>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+            </div>
           </div>
         </div>
       )}

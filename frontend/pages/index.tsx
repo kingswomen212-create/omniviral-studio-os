@@ -483,7 +483,7 @@ export default function Home() {
               <div className="title-3" style={{ fontWeight: 700, color: 'var(--text)', lineHeight: 1.1 }}>
                 OMNIVIRAL <span style={{ color: 'var(--accent)' }}>OS</span>
               </div>
-              <div className="mono caption-4" style={{ fontSize: '11px', letterSpacing: '0.06em' }}>STUDIO v10.0</div>
+              <div className="mono caption-4" style={{ fontSize: '11px', letterSpacing: '0.06em' }}>STUDIO v11.0</div>
             </div>
           </button>
 

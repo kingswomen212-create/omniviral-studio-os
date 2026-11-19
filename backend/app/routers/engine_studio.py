@@ -7,7 +7,8 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app.core.config import ASSETS_DIR, OUTPUT_DIR
-from app.core.database import save_video
+from app.core.database import get_all_settings, save_video, set_setting
+from app.services.cinema_media_engine import get_active_media_providers
 from app.services.render_engine import (
     CINEMA_MASTER_GRADES,
     RenderEngine,
@@ -20,60 +21,92 @@ from app.services.render_engine import (
 UPLOAD_DIR = ASSETS_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-router = APIRouter(prefix="/engine", tags=["Cinema Render Engine v10.0, Agent Two & Pro Upscaler"])
+router = APIRouter(prefix="/engine", tags=["Cinema Render Engine v11.0, Real Video Diffusion & Pro Upscaler"])
 
-# Mirroring modern multi-model creative studio architecture (100% $0.00 Local Active Defaults + BYOK Ready)
-MODEL_ROUTER_MATRIX = {
-    "video": [
-        {"id": "omniviral_cinema_v10", "name": "OmniViral Cinema Engine v10 (Local GPU)", "cost": "$0.00", "status": "ACTIVE", "spec": "Parallel 24/30/60fps • BT.709 • Halation"},
-        {"id": "seedance_2_5", "name": "Seedance 2.5 Cinema", "cost": "BYOK", "status": "READY", "spec": "Multi-shot commercial motion"},
-        {"id": "kling_3_0", "name": "Kling 3.0 Pro", "cost": "BYOK", "status": "READY", "spec": "Physics-aware film shots"},
-        {"id": "runway_gen_4_5", "name": "Runway Gen 4.5", "cost": "BYOK", "status": "READY", "spec": "Director camera control"},
-        {"id": "minimax_h3", "name": "MiniMax H3 / Hailuo", "cost": "BYOK", "status": "READY", "spec": "Expressive character performance"},
-        {"id": "gemini_omni_flash", "name": "Gemini Omni Flash", "cost": "BYOK", "status": "READY", "spec": "Ultra-fast multimodal video"},
-    ],
-    "image": [
-        {"id": "openverse_pexels_hd", "name": "OmniViral HD Visuals + Vector 2x SSAA", "cost": "$0.00", "status": "ACTIVE", "spec": "800M+ HD assets + Pillow 2x SSAA"},
-        {"id": "flux_2", "name": "Flux 2 Pro", "cost": "BYOK", "status": "READY", "spec": "Photoreal editorial frames"},
-        {"id": "recraft", "name": "Recraft V3 Vector", "cost": "BYOK", "status": "READY", "spec": "Brand design & typography"},
-        {"id": "nano_banana_3", "name": "Nano Banana 3 / Pro", "cost": "BYOK", "status": "READY", "spec": "Character consistency lock"},
-        {"id": "gpt_image_2_5", "name": "GPT Image 2.5 / Qwen 2.0", "cost": "BYOK", "status": "READY", "spec": "Text-accurate ad visuals"},
-    ],
-    "audio": [
-        {"id": "edge_tts_318", "name": "Edge-TTS Neural Studio (318 Voices)", "cost": "$0.00", "status": "ACTIVE", "spec": "70+ languages • 48kHz • -14 LUFS"},
-        {"id": "elevenlabs", "name": "ElevenLabs / Voice Cloning", "cost": "BYOK", "status": "READY", "spec": "Ultra-expressive studio clone"},
-        {"id": "sonic_3_5", "name": "Sonic 3.5 / Gemini 3.1 Flash TTS", "cost": "BYOK", "status": "READY", "spec": "Low-latency commercial narration"},
-    ],
-    "music": [
-        {"id": "omniviral_dsp_synth", "name": "OmniViral Broadcast DSP & SFX Synth", "cost": "$0.00", "status": "ACTIVE", "spec": "6 moods + 10 SFX + Sidechain ducking"},
-        {"id": "google_lyria", "name": "Google Lyria / Mureka / MiniMax Music", "cost": "BYOK", "status": "READY", "spec": "Full commercial scores"},
-    ],
-    "upscalers": [
-        {"id": "omniviral_cas_pro", "name": "FidelityFX CAS + HQDN3D + 4K Optical Flow", "cost": "$0.00", "status": "ACTIVE", "spec": "2x/4K CAS sharpen + Deband + 60fps MCI"},
-        {"id": "topaz_astra_2", "name": "Topaz Astra 2 / Topaz Video", "cost": "BYOK", "status": "READY", "spec": "Cloud neural video upscale"},
-        {"id": "bytedance_upscale", "name": "ByteDance VOD Upscale / Magnific", "cost": "BYOK", "status": "READY", "spec": "Detail-preserving restoration"},
-    ],
-}
+
+def _build_live_model_matrix() -> Dict[str, List[Dict[str, Any]]]:
+    mp = get_active_media_providers()["providers"]
+    fal_on = mp["fal_ai"]["configured"]
+    rep_on = mp["replicate"]["configured"]
+    gem_on = mp["gemini"]["configured"]
+    px_on = mp["pexels_video"]["configured"]
+    pb_on = mp["pixabay_video"]["configured"]
+    hf_on = mp["huggingface_flux"]["configured"]
+
+    return {
+        "video": [
+            {"id": "seedance_2_5", "name": "Seedance Pro (fal.ai)", "cost": "fal_api_key", "status": "ACTIVE" if fal_on else "ADD KEY", "spec": "Real generative cinema motion video"},
+            {"id": "kling_3_0", "name": "Kling 2.1 Master (fal.ai / Replicate)", "cost": "fal / rep key", "status": "ACTIVE" if (fal_on or rep_on) else "ADD KEY", "spec": "Physics-aware film shots & product ads"},
+            {"id": "minimax_h3", "name": "MiniMax Hailuo Video-01", "cost": "fal / rep key", "status": "ACTIVE" if (fal_on or rep_on) else "ADD KEY", "spec": "Expressive human & UGC video"},
+            {"id": "pexels_4k_video", "name": "Pexels 4K Moving Cinema Video", "cost": "FREE KEY", "status": "ACTIVE" if px_on else "FREE KEY", "spec": "Real 4K/1080p moving camera footage"},
+            {"id": "pixabay_video", "name": "Pixabay HD/4K Moving Video", "cost": "FREE KEY", "status": "ACTIVE" if pb_on else "FREE KEY", "spec": "Real moving cinema stock B-roll"},
+            {"id": "omniviral_cinema_v10", "name": "Auto Best-Available Cinema Router", "cost": "$0.00+", "status": "ACTIVE", "spec": "Auto-selects AI Video -> 4K Video -> FLUX -> Editorial"},
+        ],
+        "image": [
+            {"id": "hf_flux", "name": "FLUX.1-schnell (HuggingFace)", "cost": "FREE KEY", "status": "ACTIVE" if hf_on else "FREE KEY", "spec": "Bespoke photoreal studio photography"},
+            {"id": "imagen_3", "name": "Google Imagen 3 (Gemini API)", "cost": "gemini key", "status": "ACTIVE" if gem_on else "ADD KEY", "spec": "Luxury commercial product frames"},
+            {"id": "openverse_curated", "name": "Curated Clutter-Free Editorial + 2x SSAA", "cost": "$0.00", "status": "ACTIVE", "spec": "Zero-key filtered stock + Pillow 2x SSAA"},
+        ],
+        "audio": [
+            {"id": "edge_tts_318", "name": "Edge-TTS Neural Studio (318 Voices)", "cost": "$0.00", "status": "ACTIVE", "spec": "70+ languages • 48kHz • -14 LUFS"},
+            {"id": "omniviral_dsp_synth", "name": "Broadcast DSP Music & UI Foley Synth", "cost": "$0.00", "status": "ACTIVE", "spec": "6 moods + 10 SFX + Sidechain ducking"},
+        ],
+        "upscalers": [
+            {"id": "omniviral_cas_pro", "name": "FidelityFX CAS + HQDN3D + 4K Optical Flow", "cost": "$0.00", "status": "ACTIVE", "spec": "2x/4K CAS sharpen + Deband + 60fps MCI"},
+            {"id": "halation_remaster", "name": "Dual-Path Optical Film Halation Bloom", "cost": "$0.00", "status": "ACTIVE", "spec": "Highlight screen bloom + Kodak grain"},
+        ],
+    }
 
 
 @router.get("/capabilities")
 async def get_engine_capabilities():
     caps = detect_render_capabilities()
     return {
-        "engine_version": "10.0.0",
+        "engine_version": "11.0.0",
         "hardware": caps,
+        "media_providers": get_active_media_providers(),
         "grades": [{"id": k, **v} for k, v in CINEMA_MASTER_GRADES.items()],
         "use_cases": [
             {"id": k, "name": v["name"], "grade": v["grade"], "cadence": v["cadence"]}
             for k, v in USE_CASE_TEMPLATES.items()
         ],
-        "models": MODEL_ROUTER_MATRIX,
+        "models": _build_live_model_matrix(),
+    }
+
+
+class ProviderKeysRequest(BaseModel):
+    pexels_api_key: Optional[str] = None
+    pixabay_api_key: Optional[str] = None
+    hf_api_token: Optional[str] = None
+    fal_api_key: Optional[str] = None
+    replicate_api_token: Optional[str] = None
+    gemini_api_key: Optional[str] = None
+    comfyui_url: Optional[str] = None
+
+
+@router.post("/providers")
+async def save_provider_keys(req: ProviderKeysRequest):
+    mapping = {
+        "pexels_api_key": req.pexels_api_key,
+        "pixabay_api_key": req.pixabay_api_key,
+        "hf_api_token": req.hf_api_token,
+        "fal_api_key": req.fal_api_key,
+        "replicate_api_token": req.replicate_api_token,
+        "gemini_api_key": req.gemini_api_key,
+        "comfyui_url": req.comfyui_url,
+    }
+    for k, v in mapping.items():
+        if v is not None:
+            set_setting(k, v.strip())
+    return {
+        "status": "saved",
+        "media_providers": get_active_media_providers(),
+        "models": _build_live_model_matrix(),
     }
 
 
 @router.post("/benchmark")
 async def run_engine_benchmark():
-    """Runs a real 1080p hardware GPU vs CPU x264 benchmark right on this machine."""
     results = []
     for mode, label in [("gpu_fast", "Hardware GPU Fast"), ("auto", "Auto Balanced"), ("studio_master", "Studio Master CRF 16")]:
         args = get_video_encode_args(mode=mode, crf=17, bitrate="10M")
@@ -114,10 +147,20 @@ class AgentTwoRequest(BaseModel):
     enable_halation: bool = True
     enable_motion_blur: bool = True
     model_profile: str = "omniviral_cinema_v10"
+    custom_clip_filenames: Optional[List[str]] = None
 
 
 @router.post("/agent-two")
 async def run_agent_two(req: AgentTwoRequest):
+    resolved_clips: List[str] = []
+    for fn in (req.custom_clip_filenames or []):
+        name = Path(fn).name
+        p = UPLOAD_DIR / name
+        if not p.exists():
+            p = OUTPUT_DIR / name
+        if p.exists():
+            resolved_clips.append(str(p))
+
     res = await RenderEngine.run_agent_two_production(
         brief=req.brief,
         use_case=req.use_case,
@@ -131,6 +174,7 @@ async def run_agent_two(req: AgentTwoRequest):
         enable_halation=req.enable_halation,
         enable_motion_blur=req.enable_motion_blur,
         model_profile=req.model_profile,
+        custom_clip_paths=resolved_clips or None,
     )
     save_video({
         "id": res["id"],
@@ -149,19 +193,19 @@ async def run_agent_two(req: AgentTwoRequest):
 @router.post("/upload-video")
 async def upload_video_for_remaster(file: UploadFile = File(...)):
     ext = Path(file.filename or "clip.mp4").suffix.lower() or ".mp4"
-    if ext not in (".mp4", ".webm", ".mov", ".mkv"):
-        raise HTTPException(status_code=400, detail="Supported formats: MP4, WEBM, MOV, MKV")
-    fname = f"remaster_in_{uuid.uuid4().hex[:8]}{ext}"
+    if ext not in (".mp4", ".webm", ".mov", ".mkv", ".png", ".jpg", ".jpeg"):
+        raise HTTPException(status_code=400, detail="Supported formats: MP4, WEBM, MOV, MKV, PNG, JPG")
+    fname = f"clip_in_{uuid.uuid4().hex[:8]}{ext}"
     dest = UPLOAD_DIR / fname
     content = await file.read()
     with open(dest, "wb") as f:
         f.write(content)
-    return {"filename": fname, "size": len(content)}
+    return {"filename": fname, "original_name": file.filename, "size": len(content)}
 
 
 class ProUpscaleRequest(BaseModel):
     source_filename: str
-    profile: str = "cas_2x"  # cas_2x | uhd_4k | optical_flow_60 | halation_remaster
+    profile: str = "cas_2x"
     encoder_mode: str = "gpu_fast"
 
 

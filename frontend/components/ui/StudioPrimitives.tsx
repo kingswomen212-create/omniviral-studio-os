@@ -319,7 +319,7 @@ export function ExploreShowcase({
         <div style={{ maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start', padding: '4px 12px', borderRadius: '999px', background: 'rgba(217,255,0,0.1)', border: '1px solid rgba(217,255,0,0.28)' }}>
             <span className="live-dot" />
-            <span className="mono caption-3" style={{ color: 'var(--accent)' }}>OMNIVIRAL STUDIO OS v10.0 • GPU RENDER ENGINE • AGENT TWO • 60FPS MOTION</span>
+            <span className="mono caption-3" style={{ color: 'var(--accent)' }}>OMNIVIRAL STUDIO OS v11.0 • REAL AI VIDEO DIFFUSION • 4K FOOTAGE • GPU ENGINE</span>
           </div>
           <h1 className="heading-2" style={{ color: 'var(--text)' }}>
             Direct cinema grade AI videos, ads, and faceless channels on autopilot.
