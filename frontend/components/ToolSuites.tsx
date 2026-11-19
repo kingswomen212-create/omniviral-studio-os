@@ -16,6 +16,7 @@ export type ActiveTool =
   | 'lyric_video'
   | 'clipping_agent' | 'video_agent' | 'photo_avatar' | 'video_podcast' | 'ppt_to_video' | 'video_translate'
   | 'meme_maker' | 'logo_generator' | 'remove_bg' | 'convert_compress'
+  | 'blender_3d' | 'web_3d_builder' | 'envato_templates' | 'envato_sfx' | 'envato_stock' | 'envato_graphics'
   | 'cinema_studio'
   | 'image_create' | 'image_edit' | 'image_upscale' | 'soul_character' | 'mangaka'
   | 'video_edit' | 'video_upscale' | 'video_reframe' | 'click_to_ad' | 'genjutsu' | 'short_drama' | 'content_factory'

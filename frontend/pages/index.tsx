@@ -9,6 +9,7 @@ import {
 import ToolSuites, { ActiveTool } from '../components/ToolSuites';
 import HyperGenerators, { GeneratorPreset, GLOBAL_VOICE_CHIPS } from '../components/HyperGenerators';
 import SuperSuite from '../components/SuperSuite';
+import Envato3DSuite from '../components/Envato3DSuite';
 import {
   DotGridLoader,
   AccessibleSwitch,
@@ -164,6 +165,17 @@ const MEGA_MENUS: Record<string, { title: string; items: { id: ActiveTool; name:
       { id: 'photo_avatar', name: 'Photo Avatar Studio', desc: 'Bring any portrait photo to life with voice & motion', tag: 'HEYGEN' },
       { id: 'video_podcast', name: 'AI Video Podcast Studio', desc: 'Dual host 16:9 studio podcast with synced captions', tag: '2 HOSTS' },
       { id: 'ppt_to_video', name: 'PPT & Slides to Video', desc: 'Turn presentation slides into narrated 16:9 videos', tag: 'SLIDES' }
+    ]
+  },
+  assets: {
+    title: 'ENVATO ASSETS, 3D BLENDER & 3D WEB',
+    items: [
+      { id: 'blender_3d', name: 'Chat to 3D & Blender (bpy)', desc: 'Live 360 degree 3D viewport + Blender Cycles script', tag: '3D' },
+      { id: 'web_3d_builder', name: 'Interactive 3D Website Builder', desc: 'Standalone mouse reactive 3D HTML landing pages', tag: 'WEB 3D' },
+      { id: 'envato_templates', name: '60fps Video Templates', desc: 'Logo Reveals, Lower Thirds, Breaking News & VJ Loops', tag: '60FPS' },
+      { id: 'envato_sfx', name: 'Sound Effects (SFX) Board', desc: '10 synthesized cinema, gaming, UI & trailer SFX', tag: 'SFX' },
+      { id: 'envato_stock', name: 'Stock Photos & B-Roll Search', desc: '800M+ free high res photos, backgrounds & textures' },
+      { id: 'envato_graphics', name: 'Graphics, Overlays & Banners', desc: 'Mesh gradients, film dust, palettes & 1200x630 covers' }
     ]
   }
 };
@@ -467,7 +479,7 @@ export default function Home() {
               <div className="title-3" style={{ fontWeight: 700, color: 'var(--text)', lineHeight: 1.1 }}>
                 OMNIVIRAL <span style={{ color: 'var(--accent)' }}>OS</span>
               </div>
-              <div className="mono caption-4" style={{ fontSize: '11px', letterSpacing: '0.06em' }}>STUDIO v5.0</div>
+              <div className="mono caption-4" style={{ fontSize: '11px', letterSpacing: '0.06em' }}>STUDIO v8.0</div>
             </div>
           </button>
 
@@ -476,7 +488,7 @@ export default function Home() {
               <Compass size={14} /> Explore
             </button>
 
-            {(['image', 'video', 'audio', 'studios'] as const).map(key => (
+            {(['image', 'video', 'audio', 'studios', 'assets'] as const).map(key => (
               <div key={key} style={{ position: 'relative' }}>
                 <button
                   type="button"
@@ -558,6 +570,13 @@ export default function Home() {
         <HyperGenerators
           activeTool={activeTool}
           onSelectGenerator={handleSelectGenerator}
+          onNotify={notify}
+          onVideoCreated={(v) => { setCurrentVideo(v); setVideoList(prev => [v, ...prev]); }}
+        />
+
+        {/* ENVATO ASSETS, 3D BLENDER & INTERACTIVE 3D WEB SUITE */}
+        <Envato3DSuite
+          activeTool={activeTool}
           onNotify={notify}
           onVideoCreated={(v) => { setCurrentVideo(v); setVideoList(prev => [v, ...prev]); }}
         />
