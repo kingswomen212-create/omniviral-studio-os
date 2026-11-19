@@ -10,6 +10,8 @@ import ToolSuites, { ActiveTool } from '../components/ToolSuites';
 import HyperGenerators, { GeneratorPreset, GLOBAL_VOICE_CHIPS } from '../components/HyperGenerators';
 import SuperSuite from '../components/SuperSuite';
 import Envato3DSuite from '../components/Envato3DSuite';
+import { CommercialMotionStudio } from '../components/CommercialMotionStudio';
+import { RenderEngineAgentStudio } from '../components/RenderEngineAgentStudio';
 import {
   DotGridLoader,
   AccessibleSwitch,
@@ -128,6 +130,8 @@ const MEGA_MENUS: Record<string, { title: string; items: { id: ActiveTool; name:
   video: {
     title: 'VIDEO SUITE',
     items: [
+      { id: 'agent_two_engine', name: 'Agent Two & GPU Render Engine', desc: '5-Agent film director, 3x3 storyboard, FidelityFX CAS 4K & Halation', tag: 'v10 GPU' },
+      { id: 'commercial_motion', name: 'Commercial Motion & Effects Studio', desc: 'Google/Apple 60fps spring pills, Map/Search UI & AI Sparkle', tag: 'v9.0' },
       { id: 'cinema_studio', name: 'Cinema Studio & Faceless', desc: 'Camera rigs, LUTs, Hero Storyboard & Viral Captions', tag: 'FLAGSHIP' },
       { id: 'hyperframes_studio', name: 'HyperFrames 60fps Motion', desc: 'Code driven kinetic typography, stat cards & SFX', tag: '60FPS' },
       { id: 'script_to_video', name: 'Script to Video AI', desc: 'Paste any script for auto scene split & 4K render', tag: '4K' },
@@ -479,7 +483,7 @@ export default function Home() {
               <div className="title-3" style={{ fontWeight: 700, color: 'var(--text)', lineHeight: 1.1 }}>
                 OMNIVIRAL <span style={{ color: 'var(--accent)' }}>OS</span>
               </div>
-              <div className="mono caption-4" style={{ fontSize: '11px', letterSpacing: '0.06em' }}>STUDIO v8.0</div>
+              <div className="mono caption-4" style={{ fontSize: '11px', letterSpacing: '0.06em' }}>STUDIO v10.0</div>
             </div>
           </button>
 
@@ -580,6 +584,31 @@ export default function Home() {
           onNotify={notify}
           onVideoCreated={(v) => { setCurrentVideo(v); setVideoList(prev => [v, ...prev]); }}
         />
+
+        {/* AGENT TWO MULTI-AGENT DIRECTOR & GPU CINEMA RENDER ENGINE v10.0 */}
+        {activeTool === 'agent_two_engine' && (
+          <main style={{ maxWidth: '1440px', width: '100%', margin: '0 auto', padding: '28px 24px' }}>
+            <RenderEngineAgentStudio
+              apiBase={`${API_BASE}/api`}
+              savedVideos={videoList}
+              voices={voices}
+              onNotify={notify}
+              onMediaCreated={(v) => { setCurrentVideo(v); setVideoList(prev => [v, ...prev]); }}
+            />
+          </main>
+        )}
+
+        {/* COMMERCIAL MOTION GRAPHICS & STUDIO EFFECTS v9.0 */}
+        {activeTool === 'commercial_motion' && (
+          <main style={{ maxWidth: '1440px', width: '100%', margin: '0 auto', padding: '28px 24px' }}>
+            <CommercialMotionStudio
+              apiBase={`${API_BASE}/api`}
+              savedVideos={videoList}
+              onNotify={notify}
+              onMediaCreated={(v) => { setCurrentVideo(v); setVideoList(prev => [v, ...prev]); }}
+            />
+          </main>
+        )}
 
         {/* CAPCUT, EROMIFY & HEYGEN SUPER SUITE (10 TOOLS) */}
         <SuperSuite
