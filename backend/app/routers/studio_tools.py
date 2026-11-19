@@ -6,14 +6,16 @@ import httpx
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from app.core.config import OUTPUT_DIR
+from app.core.config import OUTPUT_DIR, MUSIC_DIR
 from app.core.database import get_conn, save_video
 from app.services.visual_service import VisualService
 from app.services.voice_service import VoiceService
 from app.services.subtitle_service import SubtitleService
 from app.services.composer_service import ComposerService, COLOR_LUT_FILTERS
+from app.services.audio_engine import AudioEngine
 
 router = APIRouter(prefix="/tools", tags=["Image, Video, Audio & Studios Suite"])
 
@@ -487,3 +489,193 @@ async def translate_and_dub(req: TranslateDubRequest):
         "filename": res["filename"],
         "url": f"/api/videos/stream/{res['filename']}"
     }
+
+# ==================== BUILT-IN MUSIC LIBRARY & CUSTOM UPLOAD ====================
+
+@router.get("/audio/music-library")
+async def get_music_library():
+    return AudioEngine.list_music()
+
+@router.get("/audio/music-preview")
+async def preview_music_mood(mood: str = "dark_cinematic"):
+    path = AudioEngine.generate_music_preview(mood)
+    return FileResponse(path=path, media_type="audio/mpeg")
+
+@router.post("/audio/music-upload")
+async def upload_custom_music(file: UploadFile = File(...)):
+    job_id = str(uuid.uuid4())[:8]
+    safe_name = f"custom_bgm_{job_id}_{file.filename.replace(' ', '_')}"
+    target = OUTPUT_DIR / safe_name
+    with open(target, "wb") as f:
+        f.write(await file.read())
+    return {"filename": safe_name, "url": f"/api/videos/stream/{safe_name}"}
+
+# ==================== HYPERFRAMES MOTION GRAPHICS ENGINE (60FPS) ====================
+
+class HyperFramesRequest(BaseModel):
+    headline: str = "AI VIDEO EDITING 2.0"
+    stat_value: str = "10X FASTER"
+    stat_label: str = "BROADCAST 60FPS PIPELINE"
+    bullets: List[str] = [
+        "Programmatic Kinetic Typography",
+        "Automated Ducking & Whoosh SFX",
+        "Broadcast -14 LUFS & 4K Export"
+    ]
+    narration: str = "Stop spending six hours on manual keyframes. Programmatic motion graphics render crisp kinetic typography, animated stat cards, and broadcast audio in seconds."
+    accent_hex: str = "D9FF00"
+    voice_id: str = "en-US-ChristopherNeural"
+    music_mood: str = "cyberpunk_synth"
+    aspect_ratio: str = "9:16"
+
+@router.post("/video/hyperframes")
+async def render_hyperframes_motion_reel(req: HyperFramesRequest):
+    """
+    HyperFrames-inspired deterministic 60fps programmatic motion graphics engine:
+    Renders kinetic typography, eased sliding stat cards, glowing OLED grid,
+    animated beat bars, synchronized Whoosh SFX, ducked music, and -14 LUFS mastering.
+    """
+    job_id = str(uuid.uuid4())[:8]
+    w, h = VisualService.get_dimensions(req.aspect_ratio)
+    accent = f"0x{req.accent_hex.lstrip('#')[:6]}"
+
+    # 1. Synthesize Voiceover + Subtitles
+    v_res = await VoiceService.synthesize_speech(req.narration, req.voice_id, f"hf_a_{job_id}.mp3", rate="+8%")
+    dur = ComposerService._get_duration(v_res["audio_path"], fallback=v_res["duration"] or 14.0)
+    sub_path = OUTPUT_DIR / f"hf_sub_{job_id}.ass"
+    SubtitleService.generate_ass_subtitles(v_res["word_boundaries"], sub_path, style="volt", aspect_ratio=req.aspect_ratio)
+
+    # 2. Generate Music Bed + Whoosh SFX
+    bgm_path = OUTPUT_DIR / f"hf_bgm_{job_id}.mp3"
+    AudioEngine.generate_music_track(req.music_mood, dur + 1.0, bgm_path)
+    whoosh_path = AudioEngine.generate_whoosh_sfx(MUSIC_DIR / "sfx_whoosh.mp3")
+
+    # Clean text for FFmpeg drawtext
+    def clean(t: str, limit: int = 34) -> str:
+        return t.replace("'", "").replace(":", " -").replace("%", "pct")[:limit].upper()
+
+    hl = clean(req.headline, 28)
+    sv = clean(req.stat_value, 18)
+    sl = clean(req.stat_label, 30)
+    b_list = [clean(b, 34) for b in (req.bullets[:3] or ["Kinetic Motion", "Broadcast Audio", "Zero Cost"])]
+
+    sub_esc = str(sub_path.resolve()).replace("\\", "/").replace(":", "\\:")
+    out_fn = f"hyperframes_{job_id}.mp4"
+    out_path = OUTPUT_DIR / out_fn
+
+    # Build 60fps deterministic vector motion-graphics filtergraph
+    v_chain = (
+        f"color=c=0x050507:s={w}x{h}:d={dur:.2f}:r=60[bg];"
+        f"[0:a]showwaves=s={w}x200:mode=cline:colors={accent}|0x38bdf8:rate=60[waves];"
+        f"[bg][waves]overlay=0:{int(h*0.78)}[base];"
+        # Top sliding progress bar
+        f"color=c={accent}:s={w}x10:d={dur:.2f}:r=60[pbar];"
+        f"[base][pbar]overlay=x='-W+(W*t/{dur:.2f})':y=0:shortest=1[v0];"
+        # Kinetic Header Card (slides from top y=-120 -> y=160)
+        f"[v0]drawgrid=width=90:height=90:thickness=1:color=white@0.05,"
+        f"drawbox=x=56:y='min({int(h*0.10)},-160+950*t)':w={w-112}:h=180:color=0x0F111A@0.92:t=fill,"
+        f"drawbox=x=56:y='min({int(h*0.10)},-160+950*t)':w=10:h=180:color={accent}:t=fill,"
+        f"drawtext=text='HYPERFRAMES MOTION ENGINE':fontcolor={accent}:fontsize=26:x=96:y='min({int(h*0.10)+30},-130+950*t)',"
+        f"drawtext=text='{hl}':fontcolor=white:fontsize=54:x=96:y='min({int(h*0.10)+76},-84+950*t)',"
+        # Big Stat Pop Card (appears at t=1.2s sliding in from right)
+        f"drawbox=x='max(56,{w}-1800*(t-1.2))':y={int(h*0.24)}:w={w-112}:h=210:color=0x151824@0.95:t=fill:enable='gte(t,1.2)',"
+        f"drawtext=text='{sv}':fontcolor={accent}:fontsize=84:x='max(96,{w}+40-1800*(t-1.2))':y={int(h*0.24)+36}:enable='gte(t,1.2)',"
+        f"drawtext=text='{sl}':fontcolor=0xA6A6B8:fontsize=30:x='max(96,{w}+40-1800*(t-1.2))':y={int(h*0.24)+136}:enable='gte(t,1.2)',"
+        # Staggered Kinetic Bullet Cards (t=2.8s, 4.4s, 6.0s)
+        f"drawtext=text='01  {b_list[0]}':fontcolor=white:fontsize=38:box=1:boxcolor=0x0D0D14@0.9:boxborderw=18:x='min(64,-700+1600*(t-2.8))':y={int(h*0.40)}:enable='gte(t,2.8)',"
+        f"drawtext=text='02  {b_list[1] if len(b_list)>1 else b_list[0]}':fontcolor=white:fontsize=38:box=1:boxcolor=0x0D0D14@0.9:boxborderw=18:x='min(64,-700+1600*(t-4.4))':y={int(h*0.47)}:enable='gte(t,4.4)',"
+        f"drawtext=text='03  {b_list[2] if len(b_list)>2 else b_list[0]}':fontcolor={accent}:fontsize=38:box=1:boxcolor=0x0D0D14@0.9:boxborderw=18:x='min(64,-700+1600*(t-6.0))':y={int(h*0.54)}:enable='gte(t,6.0)',"
+        f"subtitles='{sub_esc}'[vout];"
+        # Broadcast audio mastering with sidechain ducking + whoosh SFX at card entrances
+        f"[0:a]aformat=sample_rates=44100:channel_layouts=stereo,asplit=2[vm][vsc];"
+        f"[1:a]aformat=sample_rates=44100:channel_layouts=stereo,volume=0.25[bm];"
+        f"[bm][vsc]sidechaincompress=threshold=0.03:ratio=6:attack=25:release=250[bd];"
+        f"[2:a]aformat=sample_rates=44100:channel_layouts=stereo,adelay=1100|1100,volume=0.45[w1];"
+        f"[3:a]aformat=sample_rates=44100:channel_layouts=stereo,adelay=2700|2700,volume=0.40[w2];"
+        f"[vm][bd][w1][w2]amix=inputs=4:duration=first:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11[aout]"
+    )
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", v_res["audio_path"],
+        "-i", str(bgm_path),
+        "-i", str(whoosh_path),
+        "-i", str(whoosh_path),
+        "-filter_complex", v_chain,
+        "-map", "[vout]", "-map", "[aout]",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "256k",
+        "-t", f"{dur:.2f}",
+        str(out_path)
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise HTTPException(status_code=500, detail=f"HyperFrames FFmpeg error: {proc.stderr[-500:]}")
+
+    thumb_fn = f"hf_thumb_{job_id}.jpg"
+    subprocess.run(["ffmpeg", "-y", "-ss", "3.2", "-i", str(out_path), "-frames:v", "1", str(OUTPUT_DIR / thumb_fn)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    record = {
+        "id": job_id, "title": f"Motion Reel: {req.headline}", "niche": "hyperframes",
+        "visual_style": "hyperframes_60fps", "aspect_ratio": req.aspect_ratio, "script": req.narration,
+        "duration": round(dur, 2), "filename": out_fn, "thumbnail_filename": thumb_fn,
+        "url": f"/api/videos/stream/{out_fn}", "thumbnail_url": f"/api/videos/stream/{thumb_fn}",
+        "tags": ["#hyperframes", "#motiongraphics", "#60fps", "#ai"], "status": "ready"
+    }
+    save_video(record)
+    return record
+
+# ==================== LYRIC VIDEO MAKER (AITuber Toolkit) ====================
+
+@router.post("/video/lyric-video")
+async def create_lyric_video(
+    file: UploadFile = File(...),
+    title: str = Form("Midnight Echoes"),
+    lyrics: str = Form("Lights fade into neon rain\nEvery beat rewrites the night\nFeel the pulse inside the frame"),
+    aspect_ratio: str = Form("9:16")
+):
+    job_id = str(uuid.uuid4())[:8]
+    in_audio = OUTPUT_DIR / f"lyr_a_{job_id}_{file.filename}"
+    with open(in_audio, "wb") as f:
+        f.write(await file.read())
+
+    dur = ComposerService._get_duration(str(in_audio), fallback=20.0)
+    lines = [ln.strip() for ln in lyrics.splitlines() if ln.strip()] or [title]
+    per_line = dur / max(1, len(lines))
+
+    # Build timed word boundaries for bold lyric captions
+    wbs = []
+    for idx, ln in enumerate(lines):
+        words = ln.split()
+        t0 = idx * per_line
+        pw = per_line / max(1, len(words))
+        for wi, w_str in enumerate(words):
+            wbs.append({"text": w_str, "start": round(t0 + wi * pw, 3), "end": round(t0 + (wi + 1) * pw, 3), "duration": round(pw, 3)})
+
+    sub_path = OUTPUT_DIR / f"lyr_sub_{job_id}.ass"
+    SubtitleService.generate_ass_subtitles(wbs, sub_path, style="volt", aspect_ratio=aspect_ratio)
+    w, h = VisualService.get_dimensions(aspect_ratio)
+    out_fn = f"lyric_{job_id}.mp4"
+    out_path = OUTPUT_DIR / out_fn
+    sub_esc = str(sub_path.resolve()).replace("\\", "/").replace(":", "\\:")
+
+    fc = (
+        f"color=c=0x050507:s={w}x{h}:d={dur:.2f}[bg];"
+        f"[0:a]showwaves=s={w}x{int(h*0.32)}:mode=cline:colors=0xD9FF00|0x38bdf8:rate=30[waves];"
+        f"[bg][waves]overlay=0:{int(h*0.62)},vignette=PI/3.5,subtitles='{sub_esc}'[outv]"
+    )
+    subprocess.run([
+        "ffmpeg", "-y", "-i", str(in_audio), "-filter_complex", fc,
+        "-map", "[outv]", "-map", "0:a",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "19", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "256k", "-t", f"{dur:.2f}", str(out_path)
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    record = {
+        "id": job_id, "title": f"Lyric Video: {title}", "niche": "lyric_video",
+        "visual_style": "visualizer", "aspect_ratio": aspect_ratio, "script": lyrics,
+        "duration": round(dur, 2), "filename": out_fn, "thumbnail_filename": "",
+        "url": f"/api/videos/stream/{out_fn}", "thumbnail_url": None,
+        "tags": ["#lyrics", "#musicvideo", "#spotify"], "status": "ready"
+    }
+    save_video(record)
+    return record

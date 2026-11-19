@@ -13,7 +13,8 @@ VISUAL_STYLES = {
     "fantasy": "epic dark fantasy concept art, magical atmosphere, glowing runes, painterly",
     "noir": "black and white film noir, high contrast shadows, moody detective aesthetic, 1940s",
     "watercolor": "ethereal watercolor painting, soft brush strokes, artistic illustration",
-    "comic": "bold comic book art style, ink outlines, halftone dots, dynamic action framing"
+    "comic": "bold comic book art style, ink outlines, halftone dots, dynamic action framing",
+    "flat_explainer": "clean modern flat vector illustration, minimal geometric shapes, bold colors, motion graphics explainer style"
 }
 
 NICHE_CATALOG = [
@@ -198,6 +199,110 @@ NICHE_TEMPLATES = {
             "title": "Why Smartphones Die By 2035",
             "tags": ["#cyberpunk", "#future", "#ai", "#tech"]
         }
+    ],
+    "motivational": [
+        {
+            "hook": "Nobody is coming to save you. And that is the greatest news you will ever hear.",
+            "scenes": [
+                {"text": "Every setback you survived built the armor you need for your next level.", "query": "athlete training dark gym spotlight dramatic"},
+                {"text": "While everyone else waits for permission, the obsessed quietly build in silence.", "query": "sunrise mountain runner silhouette epic"},
+                {"text": "Six months of ruthless focus can put you five years ahead of everyone around you.", "query": "city skyline dawn golden hour aerial"},
+                {"text": "Lock in today. Your future self is watching.", "query": "confident silhouette overlooking horizon"}
+            ],
+            "title": "6 Months of Ruthless Focus Changes Everything",
+            "tags": ["#motivation", "#discipline", "#mindset", "#grind"]
+        }
+    ],
+    "explainer": [
+        {
+            "hook": "How does fiber optic internet actually move data across the ocean at light speed?",
+            "scenes": [
+                {"text": "Beneath every ocean sit hair-thin glass cables carrying 99 percent of global internet traffic.", "query": "glowing fiber optic light strands macro blue"},
+                {"text": "Pulses of laser light bounce endlessly off mirror-like inner glass walls without losing speed.", "query": "abstract geometric light laser beam clean"},
+                {"text": "In a single millisecond, a beam travels 200 kilometers under total ocean darkness.", "query": "global network map glowing digital lines"},
+                {"text": "Every video you stream literally traveled as pure trapped light beneath the sea.", "query": "futuristic server room glowing cyan"}
+            ],
+            "title": "How The Internet Crosses Oceans At Light Speed",
+            "tags": ["#explainer", "#tech", "#science", "#learning"]
+        }
+    ],
+    "pov": [
+        {
+            "hook": "POV: You wake up in the year 2150 and step outside your apartment window.",
+            "scenes": [
+                {"text": "Silent magnetic sky-trains glide past floating vertical forests 80 stories above the ground.", "query": "futuristic vertical forest skyscraper sci fi"},
+                {"text": "Your morning sunlight is dynamically tinted by the city dome to match your sleep cycle.", "query": "futuristic glass dome city morning light"},
+                {"text": "Nobody owns a car anymore. Autonomous pods arrive in 9 seconds on voice command.", "query": "sleek futuristic autonomous vehicle neon street"},
+                {"text": "Would you stay in 2150, or go back to today?", "query": "cyberpunk futuristic skyline twilight pov"}
+            ],
+            "title": "POV: Waking Up In The Year 2150",
+            "tags": ["#pov", "#future", "#scifi", "#immersive"]
+        }
+    ],
+    "documentary": [
+        {
+            "hook": "In 1977, humanity launched a golden record into deep space meant to outlive Earth itself.",
+            "scenes": [
+                {"text": "Mounted aboard Voyager 1, the gold-plated copper disc carries greetings in 55 languages.", "query": "voyager spacecraft deep space stars nasa"},
+                {"text": "It holds whale songs, Bach symphonies, human laughter, and a map to our solar system.", "query": "golden vinyl record dramatic spotlight macro"},
+                {"text": "Now over 15 billion miles away, Voyager has crossed into interstellar space.", "query": "deep cosmos milky way galaxy dark sky"},
+                {"text": "Long after our cities turn to dust, this golden message will still be drifting among the stars.", "query": "planet earth pale blue dot space"}
+            ],
+            "title": "The Golden Record That Will Outlive Humanity",
+            "tags": ["#documentary", "#space", "#history", "#voyager"]
+        }
+    ],
+    "kids_educational": [
+        {
+            "hook": "Did you know octopuses have three hearts and blue blood?",
+            "scenes": [
+                {"text": "Two hearts pump blood to their gills, and the third heart pumps it to the rest of their body!", "query": "colorful underwater coral reef octopus ocean"},
+                {"text": "Even cooler, octopuses are masters of disguise and can change colors in less than a second.", "query": "bright tropical fish colorful ocean reef"},
+                {"text": "They also have nine brains—one main brain and a mini brain inside each of their eight arms!", "query": "cute marine sea creatures underwater sunlight"},
+                {"text": "Nature is full of amazing superpowers. What animal should we explore next?", "query": "sunny turquoise ocean underwater bubbles"}
+            ],
+            "title": "Why Octopuses Have 3 Hearts & 9 Brains!",
+            "tags": ["#kids", "#educational", "#animals", "#funfacts"]
+        }
+    ],
+    "talking_objects": [
+        {
+            "hook": "Hey! I'm a blueberry, and you won't believe what I do to your brain.",
+            "scenes": [
+                {"text": "I might look tiny, but I'm packed with anthocyanins—tiny purple shields that protect your memory!", "query": "fresh blueberries macro water droplets vibrant"},
+                {"text": "Eat a handful of me every morning and watch your focus skyrocket all afternoon.", "query": "colorful healthy fruit bowl bright lighting"},
+                {"text": "Your heart loves me too because I help keep your blood flowing smooth and strong.", "query": "fresh organic berries sunlight splash"},
+                {"text": "Don't leave me sitting in the fridge—drop me in your smoothie today!", "query": "purple berry smoothie bright kitchen"}
+            ],
+            "title": "Hi! I'm A Blueberry & Here Is My Superpower",
+            "tags": ["#talkingfruit", "#health", "#nutrition", "#3danimation"]
+        }
+    ],
+    "horror": [
+        {
+            "hook": "Never answer a knock on your window if you live on the fourth floor.",
+            "scenes": [
+                {"text": "Last winter at 3 AM, three slow taps echoed against my bedroom glass.", "query": "dark rainy apartment window night eerie"},
+                {"text": "There is no balcony outside. Just a sheer 50-foot drop into an empty alley.", "query": "foggy dark alley streetlamp midnight"},
+                {"text": "When I opened the blinds, there was nothing outside—except five wet handprints on the glass.", "query": "creepy misty glass handprint dark shadow"},
+                {"text": "The terrifying part? The handprints were on the inside.", "query": "dark hallway flickering light horror"}
+            ],
+            "title": "The Knock On The Fourth Floor Window",
+            "tags": ["#horror", "#scarystories", "#creepy", "#shorts"]
+        }
+    ],
+    "history": [
+        {
+            "hook": "The Library of Alexandria wasn't destroyed in one fire—the truth is far crazier.",
+            "scenes": [
+                {"text": "At its peak, ancient ships docking in Egypt were required to hand over every scroll on board to be copied.", "query": "ancient egyptian papyrus scrolls library"},
+                {"text": "Over 400,000 manuscripts of astronomy, engineering, and lost empires filled its marble halls.", "query": "ancient marble temple columns dramatic light"},
+                {"text": "Instead of one disaster, centuries of budget cuts, wars, and neglect slowly erased humanity's backup drive.", "query": "ancient ruins fire embers sunset epic"},
+                {"text": "Imagine how advanced our world would be if those scrolls had survived.", "query": "ancient pyramids starry night sky"}
+            ],
+            "title": "The Real Secret Behind The Library of Alexandria",
+            "tags": ["#history", "#ancient", "#mystery", "#facts"]
+        }
     ]
 }
 
@@ -233,6 +338,38 @@ class ScriptService:
     @staticmethod
     def list_visual_styles() -> List[Dict[str, str]]:
         return [{"id": k, "name": k.replace("_", " ").title(), "prompt_suffix": v} for k, v in VISUAL_STYLES.items()]
+
+    @staticmethod
+    def split_raw_script_into_scenes(raw_script: str, visual_style: str = "cinematic") -> Dict[str, Any]:
+        """
+        Script-to-Video AI: Splits any pasted script into 3-6 punchy visual scenes with auto keywords.
+        """
+        import re
+        style_suffix = VISUAL_STYLES.get(visual_style, VISUAL_STYLES["cinematic"])
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', raw_script.strip()) if s.strip()]
+        if not sentences:
+            sentences = [raw_script.strip()]
+
+        # Group into up to 5 scenes
+        scenes = []
+        step = max(1, (len(sentences) + 4) // 5)
+        for i in range(0, len(sentences), step):
+            chunk = " ".join(sentences[i:i + step])
+            # Extract meaningful visual keywords (words >= 4 chars)
+            kw = " ".join([w.strip(".,!?;:\"'") for w in chunk.split() if len(w.strip(".,!?;:\"'")) >= 4][:5])
+            scenes.append({
+                "text": chunk,
+                "query": kw or "cinematic dramatic dark scene",
+                "visual_prompt": f"{kw or 'cinematic dramatic scene'}, {style_suffix}"
+            })
+
+        return {
+            "title": sentences[0][:44],
+            "hook": sentences[0][:44],
+            "full_script": raw_script.strip(),
+            "scenes": scenes,
+            "tags": ["#scripttovideo", "#ai", "#shorts", "#viral"]
+        }
 
     @staticmethod
     async def generate_ideas(niche: str = "dark_psychology") -> List[Dict[str, Any]]:

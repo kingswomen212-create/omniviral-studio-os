@@ -7,6 +7,7 @@ import {
   ChevronDown, Search, Compass, ArrowRight, Music
 } from 'lucide-react';
 import ToolSuites, { ActiveTool } from '../components/ToolSuites';
+import HyperGenerators, { GeneratorPreset, GLOBAL_VOICE_CHIPS } from '../components/HyperGenerators';
 import {
   DotGridLoader,
   AccessibleSwitch,
@@ -123,6 +124,9 @@ const MEGA_MENUS: Record<string, { title: string; items: { id: ActiveTool; name:
     title: 'VIDEO SUITE',
     items: [
       { id: 'cinema_studio', name: 'Cinema Studio & Faceless', desc: 'Camera rigs, LUTs, Hero Storyboard & Viral Captions', tag: 'FLAGSHIP' },
+      { id: 'hyperframes_studio', name: 'HyperFrames 60fps Motion', desc: 'Code driven kinetic typography, stat cards & SFX', tag: '60FPS' },
+      { id: 'script_to_video', name: 'Script to Video AI', desc: 'Paste any script for auto scene split & 4K render', tag: '4K' },
+      { id: 'all_generators', name: 'All 24 Niche Generators', desc: 'True Crime, POV, Documentary, Kids, Anatomy & more', tag: '24 TOOLS' },
       { id: 'video_edit', name: 'Edit Video', desc: 'Trim, speed control, Cinema LUTs & watermark' },
       { id: 'video_upscale', name: '4K Video Upscale', desc: 'Upscale any video to sharp 2160p cinema quality' },
       { id: 'video_reframe', name: 'Smart Reframe', desc: 'Convert 16:9, 9:16 & 1:1 with blurred fill' },
@@ -136,7 +140,8 @@ const MEGA_MENUS: Record<string, { title: string; items: { id: ActiveTool; name:
       { id: 'audio_tts', name: 'Text to Speech', desc: '318 neural voices across 70+ languages ($0 cost)', tag: 'TOP' },
       { id: 'audio_voice_change', name: 'Voice Change', desc: 'Deep Trailer, Radio, Cyber Robot & LoFi presets' },
       { id: 'audio_translate', name: 'Translate & Dub', desc: 'Translate & dub in Spanish, Hindi, Arabic, Japanese+' },
-      { id: 'audio_visualizer', name: 'Spotify Visualizer', desc: 'Audio reactive vertical waveform video generator' }
+      { id: 'audio_visualizer', name: 'Spotify Visualizer', desc: 'Audio reactive vertical waveform video generator' },
+      { id: 'lyric_video', name: 'Lyric Video Maker', desc: 'Sync bold lyrics over reactive audio waveforms', tag: 'NEW' }
     ]
   },
   studios: {
@@ -179,6 +184,11 @@ export default function Home() {
   const [hookBanner, setHookBanner] = useState(true);
   const [splitScreen, setSplitScreen] = useState(false);
   const [bgMusic, setBgMusic] = useState(true);
+  const [musicMood, setMusicMood] = useState('dark_cinematic');
+  const [customMusicFilename, setCustomMusicFilename] = useState<string | null>(null);
+  const [motionGraphics, setMotionGraphics] = useState(true);
+  const [sfxWhoosh, setSfxWhoosh] = useState(true);
+  const [renderQuality, setRenderQuality] = useState('1080p_30');
   const [watermark, setWatermark] = useState('@OmniViral');
 
   const [scenes, setScenes] = useState<Scene[]>([]);
@@ -247,6 +257,38 @@ export default function Home() {
     setVoices(await res.json());
   };
 
+  const handleSelectGenerator = (g: GeneratorPreset) => {
+    if (g.niche) setSelectedNiche(g.niche);
+    if (g.lut) setColorFx(g.lut);
+    if (g.cameraMove) setCameraMove(g.cameraMove);
+    if (g.cameraBody) setCameraBody(g.cameraBody);
+    if (g.voice) setSelectedVoice(g.voice);
+    if (g.musicMood) setMusicMood(g.musicMood);
+    setScenes([]);
+    setCustomTopic('');
+    setActiveTool(g.targetTool);
+    notify('success', `Loaded ${g.name}`);
+  };
+
+  const handlePreviewMusic = () => {
+    if (audioPreviewRef.current && musicMood !== 'none') {
+      audioPreviewRef.current.src = `${API_BASE}/api/tools/audio/music-preview?mood=${musicMood}`;
+      audioPreviewRef.current.play().catch(() => {});
+    }
+  };
+
+  const handleUploadCustomMusic = async (file: File | null) => {
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const r = await fetch(`${API_BASE}/api/tools/audio/music-upload`, { method: 'POST', body: fd });
+      const d = await r.json();
+      setCustomMusicFilename(d.filename);
+      notify('success', `Custom track "${file.name}" attached`);
+    } catch { notify('error', 'Failed to upload music track'); }
+  };
+
   const handleAuditionVoice = () => {
     if (audioPreviewRef.current) {
       audioPreviewRef.current.src = `${API_BASE}/api/voices/preview?voice_id=${encodeURIComponent(selectedVoice)}`;
@@ -301,6 +343,8 @@ export default function Home() {
           visual_style: colorFx, aspect_ratio: aspectRatio, caption_style: captionStyle, bg_music: bgMusic,
           use_ai_images: true, transition, color_fx: colorFx, camera_move: cameraMove, camera_body: cameraBody,
           lens_type: lensType, progress_bar: progressBar, watermark, hook_banner: hookBanner, split_screen: splitScreen,
+          music_mood: musicMood, custom_music_filename: customMusicFilename, motion_graphics: motionGraphics,
+          sfx_whoosh: sfxWhoosh, render_quality: renderQuality,
           scenes: scenes.length > 0 ? scenes : undefined
         })
       });
@@ -468,6 +512,8 @@ export default function Home() {
               </div>
             ))}
 
+            <button type="button" onClick={() => { setActiveTool('all_generators'); setOpenMenu(null); }} className={`pill-btn ${activeTool === 'all_generators' ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: '13px' }}>24 Generators</button>
+            <button type="button" onClick={() => { setActiveTool('hyperframes_studio'); setOpenMenu(null); }} className={`pill-btn ${activeTool === 'hyperframes_studio' ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: '13px' }}>HyperFrames</button>
             <button type="button" onClick={() => { setActiveTool('mcp_hub'); setOpenMenu(null); }} className={`pill-btn ${activeTool === 'mcp_hub' ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: '13px' }}>MCP & CLI</button>
             <button type="button" onClick={() => { setActiveTool('ideas'); setOpenMenu(null); }} className={`pill-btn ${activeTool === 'ideas' ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: '13px' }}>Ideas</button>
             <button type="button" onClick={() => { setActiveTool('settings'); setOpenMenu(null); }} className={`pill-btn ${activeTool === 'settings' ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: '13px' }}>API & Keys</button>
@@ -496,6 +542,14 @@ export default function Home() {
             onSelectVideo={(v) => { setCurrentVideo(v); setViewportMode('video'); }}
           />
         )}
+
+        {/* 24 GENERATORS, HYPERFRAMES 60FPS, SCRIPT-TO-VIDEO & LYRIC VIDEO */}
+        <HyperGenerators
+          activeTool={activeTool}
+          onSelectGenerator={handleSelectGenerator}
+          onNotify={notify}
+          onVideoCreated={(v) => { setCurrentVideo(v); setVideoList(prev => [v, ...prev]); }}
+        />
 
         {/* SPECIALIZED SUITES */}
         <ToolSuites
@@ -720,6 +774,19 @@ export default function Home() {
                   </button>
                 </div>
                 {allVoicesMode && <input className="studio-input" placeholder="Filter language (en, es, hi, ar)..." value={voiceFilter} onChange={e => setVoiceFilter(e.target.value)} style={{ marginBottom: '8px' }} />}
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  {GLOBAL_VOICE_CHIPS.slice(0, 8).map(vc => (
+                    <button
+                      key={vc.id}
+                      type="button"
+                      onClick={() => { setSelectedVoice(vc.id); if (audioPreviewRef.current) { audioPreviewRef.current.src = `${API_BASE}/api/voices/preview?voice_id=${encodeURIComponent(vc.id)}`; audioPreviewRef.current.play().catch(() => {}); } }}
+                      className={`pill-btn ${selectedVoice === vc.id ? 'active' : ''}`}
+                      style={{ padding: '4px 7px', fontSize: '11px' }}
+                    >
+                      <span className="mono" style={{ fontSize: '9px', opacity: 0.7 }}>{vc.flag}</span> {vc.label}
+                    </button>
+                  ))}
+                </div>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                   <select className="studio-input" value={selectedVoice} onChange={e => setSelectedVoice(e.target.value)} style={{ flex: 1 }} aria-label="Select voice">
                     {filteredVoices.slice(0, 100).map(v => <option key={v.id} value={v.id}>{v.name} ({v.locale})</option>)}
@@ -738,7 +805,36 @@ export default function Home() {
                 <AccessibleSwitch label="Acid Lime Progress Bar" checked={progressBar} onChange={setProgressBar} />
                 <AccessibleSwitch label="2.8s Hook Title Card" checked={hookBanner} onChange={setHookBanner} />
                 <AccessibleSwitch label="Split Screen Wave Mode" checked={splitScreen} onChange={setSplitScreen} />
-                <AccessibleSwitch label="Cinematic Synth Bed" checked={bgMusic} onChange={setBgMusic} />
+                <AccessibleSwitch label="HyperFrames Beat Badges" checked={motionGraphics} onChange={setMotionGraphics} />
+                <AccessibleSwitch label="Transition Whoosh SFX" checked={sfxWhoosh} onChange={setSfxWhoosh} />
+                <AccessibleSwitch label="Cinematic Music Bed" checked={bgMusic} onChange={setBgMusic} />
+                {bgMusic && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '6px 0 8px' }}>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <select className="studio-input" value={musicMood} onChange={e => { setMusicMood(e.target.value); setCustomMusicFilename(null); }} style={{ flex: 1, padding: '7px 8px', fontSize: '12px' }} aria-label="Background music mood">
+                        <option value="dark_cinematic">Dark Cinematic Pulse</option>
+                        <option value="lofi_chill">LoFi Study Warmth</option>
+                        <option value="epic_hans">Epic Brass Drone</option>
+                        <option value="cyberpunk_synth">Cyberpunk Synthwave</option>
+                        <option value="true_crime_suspense">Midnight Suspense</option>
+                        <option value="motivational_rise">Uplifting Horizon</option>
+                      </select>
+                      <button type="button" onClick={handlePreviewMusic} aria-label="Preview music track" className="pill-btn" style={{ padding: '0 10px', color: 'var(--accent)' }}><Volume2 size={14} /></button>
+                    </div>
+                    <label className="pill-btn caption-4" style={{ padding: '6px 10px', justifyContent: 'center', fontSize: '11px' }}>
+                      <Music size={12} /> {customMusicFilename ? 'Custom Track Ready' : 'Upload Own MP3/WAV'}
+                      <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={e => handleUploadCustomMusic(e.target.files?.[0] || null)} />
+                    </label>
+                  </div>
+                )}
+                <div style={{ marginTop: '8px' }}>
+                  <div className="mono caption-4" style={{ marginBottom: '4px' }}>MASTER QUALITY (-14 LUFS)</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '5px' }}>
+                    {[{ id: '1080p_30', l: '1080p' }, { id: '1080p_60', l: '60fps Pro' }, { id: '4k_uhd', l: '4K UHD' }].map(q => (
+                      <button key={q.id} type="button" onClick={() => setRenderQuality(q.id)} className={`pill-btn mono ${renderQuality === q.id ? 'active' : ''}`} style={{ padding: '6px 4px', fontSize: '11px' }}>{q.l}</button>
+                    ))}
+                  </div>
+                </div>
                 <input className="studio-input" value={watermark} onChange={e => setWatermark(e.target.value)} placeholder="@ChannelHandle" style={{ marginTop: '8px' }} aria-label="Channel watermark" />
               </div>
 
