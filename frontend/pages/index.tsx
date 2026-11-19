@@ -3,10 +3,17 @@ import Head from 'next/head';
 import {
   Film, Sparkles, Camera, Sliders, Volume2, Download,
   Share2, Zap, Layers, Wand2, Plus, Trash2, RefreshCw,
-  Check, Copy, Music, Lightbulb, Settings, Aperture, Globe,
-  Radio, Image as ImageIcon, ChevronDown
+  Check, Copy, Aperture, Globe, Image as ImageIcon,
+  ChevronDown, Search, Compass, ArrowRight, Music
 } from 'lucide-react';
 import ToolSuites, { ActiveTool } from '../components/ToolSuites';
+import {
+  DotGridLoader,
+  AccessibleSwitch,
+  ToastBanner,
+  CommandPalette,
+  ExploreShowcase
+} from '../components/ui/StudioPrimitives';
 
 interface Niche {
   id: string;
@@ -51,11 +58,11 @@ interface VideoResult {
 const API_BASE = 'http://127.0.0.1:8000';
 
 const CAMERA_MOVES = [
-  { id: 'dolly_in', name: 'Dolly In', tag: 'PUSH', desc: 'Smooth cinema push-in' },
-  { id: 'crash_zoom', name: 'Crash Zoom', tag: 'IMPACT', desc: 'Rapid viral punch-in' },
+  { id: 'dolly_in', name: 'Dolly In', tag: 'PUSH', desc: 'Smooth cinema push' },
+  { id: 'crash_zoom', name: 'Crash Zoom', tag: 'IMPACT', desc: 'Rapid viral punch' },
   { id: 'dolly_out', name: 'Dolly Out', tag: 'REVEAL', desc: 'Slow wide reveal' },
-  { id: 'pan_left', name: 'Pan Left', tag: 'SWEEP', desc: 'Horizontal cinema sweep' },
-  { id: 'pan_right', name: 'Pan Right', tag: 'SWEEP', desc: 'Reverse dolly track' },
+  { id: 'pan_left', name: 'Pan Left', tag: 'SWEEP', desc: 'Horizontal sweep' },
+  { id: 'pan_right', name: 'Pan Right', tag: 'SWEEP', desc: 'Reverse track' },
   { id: 'handheld', name: 'Handheld FPV', tag: 'RAW', desc: 'Organic action shake' },
   { id: 'orbit_drift', name: 'Orbit Drift', tag: 'FLOAT', desc: 'Diagonal cinema float' }
 ];
@@ -98,7 +105,7 @@ const CAPTION_PRESETS = [
   { id: 'cyan', name: 'Electric', sample: 'FOCUS', accent: '#00F0FF' },
   { id: 'crimson', name: 'Crimson', sample: 'ALERT', accent: '#FF2E54' },
   { id: 'minimal', name: 'Clean', sample: 'STORY', accent: '#E4E4E7' },
-  { id: 'none', name: 'Off', sample: '—', accent: '#52525B' }
+  { id: 'none', name: 'Off', sample: 'OFF', accent: '#A6A6B8' }
 ];
 
 const MEGA_MENUS: Record<string, { title: string; items: { id: ActiveTool; name: string; desc: string; tag?: string }[] }> = {
@@ -108,8 +115,8 @@ const MEGA_MENUS: Record<string, { title: string; items: { id: ActiveTool; name:
       { id: 'image_create', name: 'Create Image', desc: 'Soul 2.0, Nano Banana, Seedream & Kling models', tag: 'TOP' },
       { id: 'image_edit', name: 'Edit Image', desc: 'Cinema LUTs, contrast, saturation & poster titles' },
       { id: 'soul_character', name: 'Soul ID & AI Influencer', desc: 'Consistent characters: hairstyle, outfit & cast vault', tag: 'NEW' },
-      { id: 'image_upscale', name: '4K Image Upscale', desc: '2x / 4x Lanczos super-resolution enhancer' },
-      { id: 'mangaka', name: 'Mangaka Studio', desc: 'Turn ideas into 3-panel vertical Manga / Webtoons', tag: 'NEW' }
+      { id: 'image_upscale', name: '4K Image Upscale', desc: '2x and 4x Lanczos super resolution enhancer' },
+      { id: 'mangaka', name: 'Mangaka Studio', desc: 'Turn ideas into 3 panel vertical Manga / Webtoons', tag: 'NEW' }
     ]
   },
   video: {
@@ -118,8 +125,8 @@ const MEGA_MENUS: Record<string, { title: string; items: { id: ActiveTool; name:
       { id: 'cinema_studio', name: 'Cinema Studio & Faceless', desc: 'Camera rigs, LUTs, Hero Storyboard & Viral Captions', tag: 'FLAGSHIP' },
       { id: 'video_edit', name: 'Edit Video', desc: 'Trim, speed control, Cinema LUTs & watermark' },
       { id: 'video_upscale', name: '4K Video Upscale', desc: 'Upscale any video to sharp 2160p cinema quality' },
-      { id: 'video_reframe', name: 'Smart Reframe', desc: 'Convert 16:9 ↔ 9:16 ↔ 1:1 with blurred fill' },
-      { id: 'click_to_ad', name: 'Click to Ad', desc: 'Store URL & product → high-converting ad video', tag: 'E-COM' },
+      { id: 'video_reframe', name: 'Smart Reframe', desc: 'Convert 16:9, 9:16 & 1:1 with blurred fill' },
+      { id: 'click_to_ad', name: 'Click to Ad', desc: 'Store URL & product into high converting ad video', tag: 'E-COM' },
       { id: 'genjutsu', name: 'Genjutsu & Lipsync', desc: 'Remake reference video preserving motion & timing', tag: 'NEW' }
     ]
   },
@@ -127,44 +134,35 @@ const MEGA_MENUS: Record<string, { title: string; items: { id: ActiveTool; name:
     title: 'AUDIO SUITE',
     items: [
       { id: 'audio_tts', name: 'Text to Speech', desc: '318 neural voices across 70+ languages ($0 cost)', tag: 'TOP' },
-      { id: 'audio_voice_change', name: 'Voice Change', desc: 'Deep Trailer, Radio, Cyber Robot & Lo-Fi presets' },
+      { id: 'audio_voice_change', name: 'Voice Change', desc: 'Deep Trailer, Radio, Cyber Robot & LoFi presets' },
       { id: 'audio_translate', name: 'Translate & Dub', desc: 'Translate & dub in Spanish, Hindi, Arabic, Japanese+' },
-      { id: 'audio_visualizer', name: 'Spotify Visualizer', desc: 'Audio-reactive vertical waveform video generator' }
+      { id: 'audio_visualizer', name: 'Spotify Visualizer', desc: 'Audio reactive vertical waveform video generator' }
     ]
   },
   studios: {
     title: 'SPECIALIZED STUDIOS',
     items: [
       { id: 'studios_hub', name: 'All Studios Hub', desc: 'Browse Cinema, Marketing, Shorts & Film studios' },
-      { id: 'cinema_studio', name: 'Cinema & Shorts Studio', desc: 'End-to-end viral short & cinema production' },
-      { id: 'click_to_ad', name: 'Marketing Studio', desc: 'E-commerce URL-to-Ad video commercial builder' },
-      { id: 'autopilot', name: 'Faceless Studio (Autopilot)', desc: 'AITuber-style multi-channel auto-publisher' },
-      { id: 'short_drama', name: 'Short Drama Studio', desc: 'Dual-actor vertical drama episodes in Anamorphic', tag: 'NEW' },
-      { id: 'content_factory', name: 'Content Factory', desc: 'Batch-render 3 complete videos in one click', tag: 'SCALE' }
+      { id: 'cinema_studio', name: 'Cinema & Shorts Studio', desc: 'End to end viral short & cinema production' },
+      { id: 'click_to_ad', name: 'Marketing Studio', desc: 'Commerce URL to Ad commercial video builder' },
+      { id: 'autopilot', name: 'Faceless Studio (Autopilot)', desc: 'Multi channel automated publishing workspace' },
+      { id: 'short_drama', name: 'Short Drama Studio', desc: 'Dual actor vertical drama episodes in Anamorphic', tag: 'NEW' },
+      { id: 'content_factory', name: 'Content Factory', desc: 'Batch render 3 complete videos in one click', tag: 'SCALE' }
     ]
   }
 };
 
-function SwitchRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div onClick={() => onChange(!checked)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0', cursor: 'pointer' }}>
-      <span style={{ fontSize: '0.8rem', color: checked ? '#f4f4f5' : '#a1a1aa', fontWeight: 500 }}>{label}</span>
-      <button type="button" className={`toggle-switch ${checked ? 'on' : ''}`}><span className="toggle-knob" /></button>
-    </div>
-  );
-}
-
 export default function Home() {
   const [activeTool, setActiveTool] = useState<ActiveTool>('cinema_studio');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Catalogs
   const [niches, setNiches] = useState<Niche[]>([]);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [allVoicesMode, setAllVoicesMode] = useState(false);
   const [voiceFilter, setVoiceFilter] = useState('');
 
-  // Cinema & AITuber Parameters
   const [selectedNiche, setSelectedNiche] = useState('dark_psychology');
   const [customTopic, setCustomTopic] = useState('');
   const [aspectRatio, setAspectRatio] = useState('9:16');
@@ -204,11 +202,25 @@ export default function Home() {
   const [scheduledPosts, setScheduledPosts] = useState<any[]>([]);
   const [newChannelName, setNewChannelName] = useState('');
   const [selectedPlatforms] = useState<string[]>(['youtube', 'tiktok', 'instagram']);
-  const [publishFeedback, setPublishFeedback] = useState('');
   const [webhookUrl, setWebhookUrl] = useState('');
   const [groqKey, setGroqKey] = useState('');
   const [pexelsKey, setPexelsKey] = useState('');
-  const [settingsSaved, setSettingsSaved] = useState(false);
+
+  const notify = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/scripts/niches`).then(r => r.json()).then(setNiches).catch(() => {});
@@ -254,7 +266,9 @@ export default function Home() {
       setSelectedShotIdx(0);
       setViewportMode('hero');
       if (!customTopic && data.title) setCustomTopic(data.title);
-    } finally { setBuildingStoryboard(false); }
+      notify('success', `Loaded ${data.scenes?.length || 0} Hero Shots onto filmstrip`);
+    } catch { notify('error', 'Failed to build Hero Shots'); }
+    finally { setBuildingStoryboard(false); }
   };
 
   const handleRerollShot = async (idx: number) => {
@@ -266,18 +280,20 @@ export default function Home() {
       });
       const data = await resp.json();
       setScenes(prev => prev.map((s, i) => i === idx ? { ...s, image_filename: data.image_filename, image_url: data.image_url, loading_preview: false } : s));
+      notify('success', `Shot 0${idx + 1} visual updated`);
     } catch {
       setScenes(prev => prev.map((s, i) => i === idx ? { ...s, loading_preview: false } : s));
+      notify('error', 'Failed to refresh shot');
     }
   };
 
   const handleRenderCinemaVideo = async () => {
     setGenerating(true);
-    setRenderStep('Synthesizing neural narration & word boundaries...');
+    setRenderStep('SYNTHESIZING NEURAL VOICEOVER');
     try {
-      setTimeout(() => setRenderStep('Fetching high-res cinema shots & camera rig motion...'), 2000);
-      setTimeout(() => setRenderStep(`Applying ${colorFx.toUpperCase()} LUT, ${transition} transitions & ${cameraBody}...`), 5000);
-      setTimeout(() => setRenderStep('Burning viral captions, progress bar & mastering MP4...'), 8500);
+      setTimeout(() => setRenderStep('ANIMATING CAMERA RIG MOTION'), 2200);
+      setTimeout(() => setRenderStep(`GRADING ${colorFx.toUpperCase()} LUT`), 5500);
+      setTimeout(() => setRenderStep('MASTERING CAPTIONS & MP4'), 9000);
       const resp = await fetch(`${API_BASE}/api/videos/generate`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -293,10 +309,13 @@ export default function Home() {
       setCurrentVideo(data);
       setVideoList(prev => [data, ...prev]);
       setViewportMode('video');
-      setRenderStep('');
+      notify('success', `Rendered "${data.title}" (${data.duration}s)`);
     } catch (e: any) {
-      setRenderStep('Error: ' + e.message);
-    } finally { setGenerating(false); }
+      notify('error', e.message || 'Cinema render failed');
+    } finally {
+      setGenerating(false);
+      setRenderStep('');
+    }
   };
 
   const loadIdeas = async (nicheId: string) => {
@@ -308,18 +327,19 @@ export default function Home() {
 
   const handlePublish = async (publishNow: boolean) => {
     if (!currentVideo) return;
-    const resp = await fetch(`${API_BASE}/api/schedule`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ video_id: currentVideo.id, video_title: currentVideo.title, video_url: `${API_BASE}${currentVideo.url}`, tags: currentVideo.tags, platforms: selectedPlatforms, publish_now: publishNow })
-    });
-    const data = await resp.json();
-    setScheduledPosts(prev => [data.item, ...prev]);
-    setPublishFeedback(data.message || 'Queued!');
-    setTimeout(() => setPublishFeedback(''), 4500);
+    try {
+      const resp = await fetch(`${API_BASE}/api/schedule`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_id: currentVideo.id, video_title: currentVideo.title, video_url: `${API_BASE}${currentVideo.url}`, tags: currentVideo.tags, platforms: selectedPlatforms, publish_now: publishNow })
+      });
+      const data = await resp.json();
+      setScheduledPosts(prev => [data.item, ...prev]);
+      notify('success', data.message || 'Added to publishing queue');
+    } catch { notify('error', 'Publishing request failed'); }
   };
 
   const handleCreateChannel = async () => {
-    if (!newChannelName.trim()) return;
+    if (!newChannelName.trim()) return notify('error', 'Enter a channel name first');
     const resp = await fetch(`${API_BASE}/api/schedule/channels`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newChannelName, niche: selectedNiche, visual_style: colorFx, voice_id: selectedVoice, frequency: 'Daily at 18:00', platforms: selectedPlatforms })
@@ -327,10 +347,11 @@ export default function Home() {
     const ch = await resp.json();
     setChannels(prev => [ch, ...prev]);
     setNewChannelName('');
+    notify('success', `Autopilot channel "${ch.name}" launched`);
   };
 
   const handleGenerateVisualizer = async () => {
-    if (!vizFile) return alert('Select an MP3/WAV file first');
+    if (!vizFile) return notify('error', 'Select an MP3 or WAV audio file first');
     setVizLoading(true);
     try {
       const fd = new FormData();
@@ -343,7 +364,9 @@ export default function Home() {
       setVideoList(prev => [data, ...prev]);
       setViewportMode('video');
       setActiveTool('cinema_studio');
-    } finally { setVizLoading(false); }
+      notify('success', 'Audio visualizer rendered');
+    } catch { notify('error', 'Visualizer failed'); }
+    finally { setVizLoading(false); }
   };
 
   const handleSaveSettings = async () => {
@@ -351,8 +374,7 @@ export default function Home() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ watermark, publish_webhook_url: webhookUrl, groq_api_key: groqKey, pexels_api_key: pexelsKey })
     });
-    setSettingsSaved(true);
-    setTimeout(() => setSettingsSaved(false), 3000);
+    notify('success', 'Connectors saved persistently in SQLite');
   };
 
   const activeShot = scenes[selectedShotIdx];
@@ -363,41 +385,53 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>OMNIVIRAL OS | Image • Video • Audio • Studios • MCP</title>
+        <title>OmniViral Studio OS | AI Cinema, Image, Audio & MCP</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <audio ref={audioPreviewRef} style={{ display: 'none' }} />
 
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={setActiveTool} />
+      <ToastBanner toast={toast} onClose={() => setToast(null)} />
+
       <div className="studio-shell" onClick={() => openMenu && setOpenMenu(null)}>
-        {/* HIGGSFIELD-STYLE MEGA-MENU TOP BAR */}
+        {/* TOP MEGA-MENU HEADER */}
         <header style={{
-          height: '62px', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(8,8,11,0.94)', backdropFilter: 'blur(18px)',
-          position: 'sticky', top: 0, zIndex: 50
+          height: '64px', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          borderBottom: '1px solid var(--border)', background: 'rgba(5,5,7,0.92)', backdropFilter: 'blur(20px)',
+          position: 'sticky', top: 0, zIndex: 50, gap: '12px'
         }}>
-          <div onClick={() => setActiveTool('cinema_studio')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-            <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#D9FF00', color: '#050507', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setActiveTool('explore')}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left' }}
+          >
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--accent)', color: 'var(--on-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Film size={19} strokeWidth={2.5} />
             </div>
             <div>
-              <div className="heading-font" style={{ fontSize: '1rem', fontWeight: 800, color: '#fff', lineHeight: 1.05 }}>
-                OMNIVIRAL <span style={{ color: '#D9FF00' }}>OS</span>
+              <div className="title-3" style={{ fontWeight: 700, color: 'var(--text)', lineHeight: 1.1 }}>
+                OMNIVIRAL <span style={{ color: 'var(--accent)' }}>OS</span>
               </div>
-              <div className="mono" style={{ fontSize: '0.6rem', color: '#71717a', letterSpacing: '0.06em' }}>IMAGE • VIDEO • AUDIO • MCP</div>
+              <div className="mono caption-4" style={{ fontSize: '11px', letterSpacing: '0.06em' }}>STUDIO v5.0</div>
             </div>
-          </div>
+          </button>
 
-          {/* Center Mega-Menu Nav */}
-          <nav style={{ display: 'flex', gap: '4px', alignItems: 'center', position: 'relative' }} onClick={e => e.stopPropagation()}>
+          <nav aria-label="Main navigation" style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
+            <button type="button" onClick={() => { setActiveTool('explore'); setOpenMenu(null); }} className={`pill-btn ${activeTool === 'explore' ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: '13px' }}>
+              <Compass size={14} /> Explore
+            </button>
+
             {(['image', 'video', 'audio', 'studios'] as const).map(key => (
               <div key={key} style={{ position: 'relative' }}>
                 <button
+                  type="button"
+                  aria-expanded={openMenu === key}
                   onClick={() => setOpenMenu(openMenu === key ? null : key)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 13px', borderRadius: '9px',
-                    border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, textTransform: 'capitalize',
-                    background: openMenu === key ? 'rgba(217,255,0,0.14)' : 'transparent',
-                    color: openMenu === key ? '#D9FF00' : '#e4e4e7'
+                    display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '8px 12px', borderRadius: '8px',
+                    border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 500, textTransform: 'capitalize',
+                    background: openMenu === key ? 'rgba(217,255,0,0.12)' : 'transparent',
+                    color: openMenu === key ? 'var(--accent)' : 'var(--text)'
                   }}
                 >
                   {key} <ChevronDown size={13} />
@@ -405,26 +439,27 @@ export default function Home() {
 
                 {openMenu === key && (
                   <div className="glass-panel" style={{
-                    position: 'absolute', top: '46px', left: '-40px', width: '480px', padding: '14px',
-                    background: '#0d0d12', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 24px 64px rgba(0,0,0,0.9)',
+                    position: 'absolute', top: '48px', left: '-40px', width: '500px', padding: '16px',
+                    background: 'var(--surface)', border: '1px solid var(--border-strong)', boxShadow: '0 24px 64px rgba(0,0,0,0.92)',
                     zIndex: 100
                   }}>
-                    <div className="mono" style={{ fontSize: '0.65rem', color: '#D9FF00', marginBottom: '10px', letterSpacing: '0.08em' }}>
+                    <div className="mono caption-3" style={{ color: 'var(--accent)', marginBottom: '12px', letterSpacing: '0.08em' }}>
                       {MEGA_MENUS[key].title}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       {MEGA_MENUS[key].items.map(it => (
                         <button
                           key={it.name}
+                          type="button"
                           onClick={() => { setActiveTool(it.id); setOpenMenu(null); }}
                           className="camera-card"
-                          style={{ padding: '10px' }}
+                          style={{ padding: '12px' }}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                            <strong style={{ color: '#fff', fontSize: '0.8rem' }}>{it.name}</strong>
-                            {it.tag && <span className="mono" style={{ fontSize: '0.56rem', background: '#D9FF00', color: '#050507', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>{it.tag}</span>}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <span className="title-4" style={{ color: 'var(--text)', fontWeight: 600 }}>{it.name}</span>
+                            {it.tag && <span className="mono" style={{ fontSize: '10px', background: 'var(--accent)', color: 'var(--on-accent)', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>{it.tag}</span>}
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: '#a1a1aa', lineHeight: 1.3 }}>{it.desc}</div>
+                          <div className="caption-4">{it.desc}</div>
                         </button>
                       ))}
                     </div>
@@ -433,121 +468,141 @@ export default function Home() {
               </div>
             ))}
 
-            <button onClick={() => { setActiveTool('mcp_hub'); setOpenMenu(null); }} className={`pill-btn ${activeTool === 'mcp_hub' ? 'active' : ''}`} style={{ padding: '7px 12px', fontSize: '0.8rem', fontWeight: 600 }}>MCP & CLI</button>
-            <button onClick={() => { setActiveTool('ideas'); setOpenMenu(null); }} className={`pill-btn ${activeTool === 'ideas' ? 'active' : ''}`} style={{ padding: '7px 12px', fontSize: '0.8rem', fontWeight: 600 }}>Ideas</button>
-            <button onClick={() => { setActiveTool('settings'); setOpenMenu(null); }} className={`pill-btn ${activeTool === 'settings' ? 'active' : ''}`} style={{ padding: '7px 12px', fontSize: '0.8rem', fontWeight: 600 }}>API & Keys</button>
+            <button type="button" onClick={() => { setActiveTool('mcp_hub'); setOpenMenu(null); }} className={`pill-btn ${activeTool === 'mcp_hub' ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: '13px' }}>MCP & CLI</button>
+            <button type="button" onClick={() => { setActiveTool('ideas'); setOpenMenu(null); }} className={`pill-btn ${activeTool === 'ideas' ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: '13px' }}>Ideas</button>
+            <button type="button" onClick={() => { setActiveTool('settings'); setOpenMenu(null); }} className={`pill-btn ${activeTool === 'settings' ? 'active' : ''}`} style={{ padding: '8px 12px', fontSize: '13px' }}>API & Keys</button>
           </nav>
 
-          <div className="mono" style={{ fontSize: '0.68rem', color: '#D9FF00', background: 'rgba(217,255,0,0.08)', border: '1px solid rgba(217,255,0,0.22)', padding: '5px 10px', borderRadius: '999px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span className="live-dot" /> ALL SUITES • $0.00
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Open command palette"
+              className="pill-btn"
+              style={{ padding: '7px 12px', fontSize: '13px', color: 'var(--text)' }}
+            >
+              <Search size={14} />
+              <span className="caption-4">Search tools</span>
+              <kbd className="mono" style={{ fontSize: '11px', padding: '1px 6px', borderRadius: '5px', border: '1px solid var(--border)' }}>Ctrl K</kbd>
+            </button>
           </div>
         </header>
 
-        {/* RENDER SPECIALIZED SUITES (IMAGE, VIDEO PRO TOOLS, AUDIO, STUDIOS, MCP) */}
+        {/* EXPLORE SHOWCASE HUB */}
+        {activeTool === 'explore' && (
+          <ExploreShowcase
+            videos={videoList}
+            onLaunchTool={setActiveTool}
+            onSelectVideo={(v) => { setCurrentVideo(v); setViewportMode('video'); }}
+          />
+        )}
+
+        {/* SPECIALIZED SUITES */}
         <ToolSuites
           activeTool={activeTool}
           setActiveTool={setActiveTool}
           voices={voices}
+          onNotify={notify}
           onVideoCreated={(v) => { setCurrentVideo(v); setVideoList(prev => [v, ...prev]); }}
         />
 
         {/* FLAGSHIP CINEMA STUDIO */}
         {activeTool === 'cinema_studio' && (
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '310px 1fr 330px', gap: '14px', padding: '14px', maxWidth: '1760px', width: '100%', margin: '0 auto', alignItems: 'start' }}>
-            {/* LEFT DOCK */}
-            <aside className="glass-panel" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: 'calc(100vh - 90px)', overflowY: 'auto' }}>
+          <div className="studio-workspace-grid">
+            {/* LEFT DOCK: DIRECTOR'S RIG */}
+            <aside className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: 'calc(100vh - 96px)', overflowY: 'auto' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <span className="mono" style={{ fontSize: '0.7rem', color: '#D9FF00', letterSpacing: '0.08em' }}>01 / CAMERA MOTION</span>
-                  <Camera size={14} color="#71717a" />
+                  <span className="mono caption-3" style={{ color: 'var(--accent)', letterSpacing: '0.08em' }}>01 / CAMERA MOTION</span>
+                  <Camera size={14} color="var(--text-muted)" />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   {CAMERA_MOVES.map(m => (
-                    <button key={m.id} onClick={() => setCameraMove(m.id)} className={`camera-card ${cameraMove === m.id ? 'active' : ''}`}>
+                    <button key={m.id} type="button" onClick={() => setCameraMove(m.id)} className={`camera-card ${cameraMove === m.id ? 'active' : ''}`} style={{ padding: '10px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>{m.name}</span>
-                        <span className="mono" style={{ fontSize: '0.58rem', color: cameraMove === m.id ? '#D9FF00' : '#71717a' }}>{m.tag}</span>
+                        <span className="caption-3" style={{ color: 'var(--text)' }}>{m.name}</span>
+                        <span className="mono" style={{ fontSize: '10px', color: cameraMove === m.id ? 'var(--accent)' : 'var(--text-muted)' }}>{m.tag}</span>
                       </div>
-                      <div style={{ fontSize: '0.68rem', color: '#71717a', lineHeight: 1.25 }}>{m.desc}</div>
+                      <div className="caption-4" style={{ fontSize: '11px' }}>{m.desc}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span className="mono" style={{ fontSize: '0.7rem', color: '#D9FF00', letterSpacing: '0.08em' }}>02 / CAMERA BODY & LENS</span>
-                  <Aperture size={14} color="#71717a" />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span className="mono caption-3" style={{ color: 'var(--accent)', letterSpacing: '0.08em' }}>02 / CAMERA BODY & LENS</span>
+                  <Aperture size={14} color="var(--text-muted)" />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                   {CAMERA_BODIES.map(cb => (
-                    <button key={cb.id} onClick={() => setCameraBody(cb.id)} className={`pill-btn ${cameraBody === cb.id ? 'active' : ''}`} style={{ padding: '8px 9px', fontSize: '0.74rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{cb.name}</span><span className="mono" style={{ fontSize: '0.6rem', opacity: 0.7 }}>{cb.tag}</span>
+                    <button key={cb.id} type="button" onClick={() => setCameraBody(cb.id)} className={`pill-btn ${cameraBody === cb.id ? 'active' : ''}`} style={{ padding: '8px 10px', fontSize: '12px', justifyContent: 'space-between' }}>
+                      <span>{cb.name}</span><span className="mono" style={{ fontSize: '10px', opacity: 0.75 }}>{cb.tag}</span>
                     </button>
                   ))}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
                   {LENS_OPTICS.map(l => (
-                    <button key={l.id} onClick={() => setLensType(l.id)} className={`pill-btn ${lensType === l.id ? 'active' : ''}`} style={{ padding: '7px 5px', fontSize: '0.7rem', fontWeight: 600 }}>{l.name}</button>
+                    <button key={l.id} type="button" onClick={() => setLensType(l.id)} className={`pill-btn ${lensType === l.id ? 'active' : ''}`} style={{ padding: '8px 4px', fontSize: '11px' }}>{l.name}</button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span className="mono" style={{ fontSize: '0.7rem', color: '#D9FF00', letterSpacing: '0.08em' }}>03 / COLOR LUT GRADE</span>
-                  <Sliders size={14} color="#71717a" />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span className="mono caption-3" style={{ color: 'var(--accent)', letterSpacing: '0.08em' }}>03 / COLOR LUT GRADE</span>
+                  <Sliders size={14} color="var(--text-muted)" />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   {COLOR_LUTS.map(lut => (
-                    <button key={lut.id} onClick={() => setColorFx(lut.id)} className={`camera-card ${colorFx === lut.id ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px' }}>
-                      <span style={{ width: '20px', height: '20px', borderRadius: '6px', background: lut.grad, flexShrink: 0, border: '1px solid rgba(255,255,255,0.2)' }} />
-                      <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#f4f4f5' }}>{lut.name}</span>
+                    <button key={lut.id} type="button" onClick={() => setColorFx(lut.id)} className={`camera-card ${colorFx === lut.id ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px' }}>
+                      <span style={{ width: '18px', height: '18px', borderRadius: '5px', background: lut.grad, flexShrink: 0, border: '1px solid var(--border-strong)' }} />
+                      <span className="caption-3" style={{ color: 'var(--text)' }}>{lut.name}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span className="mono" style={{ fontSize: '0.7rem', color: '#D9FF00', letterSpacing: '0.08em' }}>04 / SCENE TRANSITION</span>
-                  <Layers size={14} color="#71717a" />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span className="mono caption-3" style={{ color: 'var(--accent)', letterSpacing: '0.08em' }}>04 / SCENE TRANSITION</span>
+                  <Layers size={14} color="var(--text-muted)" />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {TRANSITIONS.map(t => (
-                    <button key={t.id} onClick={() => setTransition(t.id)} className={`pill-btn ${transition === t.id ? 'active' : ''}`} style={{ padding: '6px 10px', fontSize: '0.72rem', fontWeight: 600 }}>{t.name}</button>
+                    <button key={t.id} type="button" onClick={() => setTransition(t.id)} className={`pill-btn ${transition === t.id ? 'active' : ''}`} style={{ padding: '7px 10px', fontSize: '12px' }}>{t.name}</button>
                   ))}
                 </div>
               </div>
             </aside>
 
             {/* CENTER STAGE */}
-            <section style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0 }}>
-              <div className="glass-panel" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+            <section style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 }}>
+              <div className="glass-panel" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
                   {niches.map(n => (
-                    <button key={n.id} onClick={() => { setSelectedNiche(n.id); if (n.default_voice) setSelectedVoice(n.default_voice); }} className={`pill-btn ${selectedNiche === n.id ? 'active' : ''}`} style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      {n.name.split('&')[0]} <span className="mono" style={{ fontSize: '0.65rem', opacity: 0.75 }}>{n.viral_score}</span>
+                    <button key={n.id} type="button" onClick={() => { setSelectedNiche(n.id); if (n.default_voice) setSelectedVoice(n.default_voice); }} className={`pill-btn ${selectedNiche === n.id ? 'active' : ''}`} style={{ padding: '7px 12px', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                      {n.name.split('&')[0]} <span className="mono" style={{ fontSize: '11px', opacity: 0.75 }}>{n.viral_score}</span>
                     </button>
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input type="text" className="studio-input" placeholder="Direct your viral story or leave blank for trending auto-script..." value={customTopic} onChange={e => setCustomTopic(e.target.value)} />
-                  <button onClick={handleBuildVisualStoryboard} disabled={buildingStoryboard} className="pill-btn" style={{ padding: '0 16px', whiteSpace: 'nowrap', fontSize: '0.8rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Wand2 size={14} color="#D9FF00" /> {buildingStoryboard ? 'Building...' : 'Build Hero Shots'}
+                  <input type="text" className="studio-input" placeholder="Direct your viral story or leave blank for trending script..." value={customTopic} onChange={e => setCustomTopic(e.target.value)} />
+                  <button type="button" onClick={handleBuildVisualStoryboard} disabled={buildingStoryboard} className="pill-btn" style={{ padding: '0 16px', whiteSpace: 'nowrap', color: 'var(--text)', minHeight: '42px' }}>
+                    <Wand2 size={15} color="var(--accent)" /> {buildingStoryboard ? 'Building...' : 'Build Hero Shots'}
                   </button>
                 </div>
               </div>
 
               <div className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button onClick={() => setViewportMode('video')} className={`pill-btn ${viewportMode === 'video' ? 'active' : ''}`} style={{ padding: '5px 11px', fontSize: '0.73rem', fontWeight: 600 }}>Final Render</button>
-                    <button onClick={() => setViewportMode('hero')} className={`pill-btn ${viewportMode === 'hero' ? 'active' : ''}`} style={{ padding: '5px 11px', fontSize: '0.73rem', fontWeight: 600 }}>Hero Frame {scenes.length > 0 ? `(${scenes.length})` : ''}</button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" onClick={() => setViewportMode('video')} className={`pill-btn ${viewportMode === 'video' ? 'active' : ''}`} style={{ padding: '6px 12px', fontSize: '12px' }}>Final Render</button>
+                    <button type="button" onClick={() => setViewportMode('hero')} className={`pill-btn ${viewportMode === 'hero' ? 'active' : ''}`} style={{ padding: '6px 12px', fontSize: '12px' }}>Hero Frame {scenes.length > 0 ? `(${scenes.length})` : ''}</button>
                   </div>
-                  <div style={{ display: 'flex', gap: '5px' }}>
+                  <div style={{ display: 'flex', gap: '6px' }}>
                     {['9:16', '16:9', '1:1'].map(ar => (
-                      <button key={ar} onClick={() => setAspectRatio(ar)} className={`pill-btn mono ${aspectRatio === ar ? 'active' : ''}`} style={{ padding: '4px 9px', fontSize: '0.7rem', fontWeight: 700 }}>{ar}</button>
+                      <button key={ar} type="button" onClick={() => setAspectRatio(ar)} className={`pill-btn mono ${aspectRatio === ar ? 'active' : ''}`} style={{ padding: '5px 10px', fontSize: '12px' }}>{ar}</button>
                     ))}
                   </div>
                 </div>
@@ -555,79 +610,86 @@ export default function Home() {
                 <div style={{
                   width: aspectRatio === '16:9' ? '100%' : (aspectRatio === '1:1' ? '340px' : '270px'),
                   height: aspectRatio === '16:9' ? '340px' : (aspectRatio === '1:1' ? '340px' : '480px'),
-                  background: '#000', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.12)',
+                  background: '#000', borderRadius: '18px', border: '1px solid var(--border)',
                   boxShadow: '0 24px 60px rgba(0,0,0,0.85)', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
                   {viewportMode === 'hero' && activeShot?.image_url ? (
                     <>
-                      <img src={`${API_BASE}${activeShot.image_url}`} alt="Hero" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <div style={{ position: 'absolute', bottom: '18%', left: '12px', right: '12px', textAlign: 'center', fontWeight: 900, fontSize: '1.1rem', color: '#D9FF00', textShadow: '0 3px 12px #000', textTransform: 'uppercase' }}>
+                      <img src={`${API_BASE}${activeShot.image_url}`} alt="Hero frame preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div style={{ position: 'absolute', bottom: '18%', left: '12px', right: '12px', textAlign: 'center', fontWeight: 700, fontSize: '18px', color: 'var(--accent)', textShadow: '0 3px 12px #000', textTransform: 'uppercase' }}>
                         {activeShot.text.slice(0, 48)}
                       </div>
                     </>
                   ) : currentVideo ? (
                     <video key={currentVideo.url} src={`${API_BASE}${currentVideo.url}`} controls autoPlay loop style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '24px', color: '#52525b' }}><Film size={36} /><div style={{ marginTop: '8px' }}>Ready to Render</div></div>
+                    <div style={{ textAlign: 'center', padding: '24px' }} className="body-5">
+                      <Film size={32} color="var(--text-muted)" />
+                      <div style={{ marginTop: '10px' }}>Ready to Render</div>
+                    </div>
                   )}
 
                   {generating && (
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(5,5,7,0.88)', backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
-                      <Sparkles size={32} color="#D9FF00" style={{ marginBottom: '12px' }} />
-                      <div className="heading-font" style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>Mastering Cinema Render...</div>
-                      <div className="mono" style={{ fontSize: '0.72rem', color: '#D9FF00' }}>{renderStep}</div>
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(5,5,7,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+                      <DotGridLoader label={renderStep || 'MASTERING CINEMA VIDEO'} />
                     </div>
                   )}
                 </div>
 
                 {currentVideo && (
-                  <div style={{ width: '100%', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ width: '100%', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                     <div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff' }}>{currentVideo.title}</div>
-                      <div className="mono" style={{ fontSize: '0.68rem', color: '#71717a' }}>{currentVideo.aspect_ratio || '9:16'} • {currentVideo.duration}s</div>
+                      <div className="title-4" style={{ color: 'var(--text)', fontWeight: 600 }}>{currentVideo.title}</div>
+                      <div className="mono caption-4">{currentVideo.aspect_ratio || '9:16'} • {currentVideo.duration}s</div>
                     </div>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <a href={`${API_BASE}${currentVideo.url}`} download={currentVideo.filename} className="pill-btn" style={{ padding: '7px 12px', fontSize: '0.75rem', fontWeight: 600, color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}><Download size={13} /> MP4</a>
-                      {currentVideo.thumbnail_url && <a href={`${API_BASE}${currentVideo.thumbnail_url}`} download={`thumb_${currentVideo.id}.jpg`} className="pill-btn" style={{ padding: '7px 12px', fontSize: '0.75rem', fontWeight: 600, color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}><ImageIcon size={13} /> Thumb</a>}
-                      <button onClick={() => { navigator.clipboard.writeText(`${currentVideo.title}\n\n${currentVideo.script}\n\n${currentVideo.tags.join(' ')}`); setCopiedSeo(true); setTimeout(() => setCopiedSeo(false), 2500); }} className="pill-btn" style={{ padding: '7px 12px', fontSize: '0.75rem', fontWeight: 600, color: '#fff', display: 'flex', alignItems: 'center', gap: '5px' }}>{copiedSeo ? <Check size={13} color="#D9FF00" /> : <Copy size={13} />} SEO</button>
-                      <button onClick={() => handlePublish(true)} className="volt-btn" style={{ padding: '7px 14px', borderRadius: '10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px' }}><Share2 size={13} /> Publish Live</button>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <a href={`${API_BASE}${currentVideo.url}`} download={currentVideo.filename} className="pill-btn" style={{ padding: '8px 12px', fontSize: '13px', color: 'var(--text)' }}><Download size={14} /> MP4</a>
+                      {currentVideo.thumbnail_url && <a href={`${API_BASE}${currentVideo.thumbnail_url}`} download={`thumb_${currentVideo.id}.jpg`} className="pill-btn" style={{ padding: '8px 12px', fontSize: '13px', color: 'var(--text)' }}><ImageIcon size={14} /> Thumb</a>}
+                      <button
+                        type="button"
+                        onClick={() => { navigator.clipboard.writeText(`${currentVideo.title}\n\n${currentVideo.script}\n\n${currentVideo.tags.join(' ')}`); setCopiedSeo(true); notify('success', 'SEO title and tags copied'); setTimeout(() => setCopiedSeo(false), 2500); }}
+                        className="pill-btn"
+                        style={{ padding: '8px 12px', fontSize: '13px', color: 'var(--text)' }}
+                      >
+                        {copiedSeo ? <Check size={14} color="var(--accent)" /> : <Copy size={14} />} SEO
+                      </button>
+                      <button type="button" onClick={() => handlePublish(true)} className="volt-btn" style={{ minHeight: '36px', padding: '0 14px', fontSize: '13px' }}><Share2 size={14} /> Publish Live</button>
                     </div>
                   </div>
                 )}
-                {publishFeedback && <div className="mono" style={{ width: '100%', marginTop: '8px', padding: '7px 10px', borderRadius: '8px', background: 'rgba(217,255,0,0.1)', color: '#D9FF00', fontSize: '0.72rem' }}>✓ {publishFeedback}</div>}
               </div>
 
               {/* FILMSTRIP TIMELINE */}
-              <div className="glass-panel" style={{ padding: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <span className="mono" style={{ fontSize: '0.7rem', color: '#D9FF00', letterSpacing: '0.08em' }}>TIMELINE FILMSTRIP {scenes.length > 0 ? `(${scenes.length} SHOTS)` : ''}</span>
-                  <button onClick={() => setScenes(prev => [...prev, { text: 'New dramatic reveal...', query: 'cinematic dark city night neon', visual_prompt: 'cinematic dark city night neon' }])} className="pill-btn" style={{ padding: '4px 10px', fontSize: '0.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', color: '#fff' }}><Plus size={12} /> Add Shot</button>
+              <div className="glass-panel" style={{ padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span className="mono caption-3" style={{ color: 'var(--accent)', letterSpacing: '0.08em' }}>TIMELINE FILMSTRIP {scenes.length > 0 ? `(${scenes.length} SHOTS)` : ''}</span>
+                  <button type="button" onClick={() => setScenes(prev => [...prev, { text: 'New dramatic reveal...', query: 'cinematic dark city night neon', visual_prompt: 'cinematic dark city night neon' }])} className="pill-btn" style={{ padding: '6px 12px', fontSize: '12px', color: 'var(--text)' }}><Plus size={13} /> Add Shot</button>
                 </div>
                 {scenes.length === 0 ? (
-                  <div style={{ padding: '16px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px', color: '#71717a', fontSize: '0.8rem' }}>
-                    Click <strong style={{ color: '#fff' }}>Build Hero Shots</strong> to edit/re-roll scenes or hit <strong style={{ color: '#D9FF00' }}>Render Cinema Video</strong> for 1-click autopilot.
+                  <div style={{ padding: '20px', textAlign: 'center', border: '1px dashed var(--border)', borderRadius: '12px' }} className="body-5">
+                    Click <strong style={{ color: 'var(--text)' }}>Build Hero Shots</strong> to inspect and re-roll scenes, or press <strong style={{ color: 'var(--accent)' }}>Render Cinema Video</strong>.
                   </div>
                 ) : (
                   <>
-                    <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '6px' }}>
+                    <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '6px' }}>
                       {scenes.map((sc, idx) => (
                         <div key={idx} onClick={() => { setSelectedShotIdx(idx); setViewportMode('hero'); }} className={`shot-card ${selectedShotIdx === idx ? 'active' : ''}`}>
-                          <div style={{ height: '94px', background: '#18181b', position: 'relative' }}>
-                            {sc.image_url ? <img src={`${API_BASE}${sc.image_url}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#52525b', fontSize: '0.7rem' }}>No Frame</div>}
-                            <span className="mono" style={{ position: 'absolute', top: '6px', left: '6px', background: 'rgba(0,0,0,0.75)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.62rem', color: '#D9FF00' }}>0{idx + 1}</span>
-                            <button onClick={e => { e.stopPropagation(); handleRerollShot(idx); }} style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.75)', border: 'none', color: '#fff', borderRadius: '5px', padding: '4px', cursor: 'pointer' }}><RefreshCw size={11} /></button>
+                          <div style={{ height: '96px', background: 'var(--bg)', position: 'relative' }}>
+                            {sc.image_url ? <img src={`${API_BASE}${sc.image_url}`} alt={`Shot ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="caption-4">No Frame</div>}
+                            <span className="mono" style={{ position: 'absolute', top: '6px', left: '6px', background: 'rgba(5,5,7,0.8)', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', color: 'var(--accent)' }}>0{idx + 1}</span>
+                            <button type="button" aria-label={`Re-roll shot ${idx + 1}`} onClick={e => { e.stopPropagation(); handleRerollShot(idx); }} style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(5,5,7,0.8)', border: 'none', color: 'var(--text)', borderRadius: '5px', padding: '5px', cursor: 'pointer' }}><RefreshCw size={12} /></button>
                           </div>
-                          <div style={{ padding: '7px 8px', fontSize: '0.72rem', color: '#e4e4e7', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sc.text}</div>
+                          <div className="caption-4" style={{ padding: '8px', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sc.text}</div>
                         </div>
                       ))}
                     </div>
                     {activeShot && (
-                      <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px' }}>
-                        <input className="studio-input" value={activeShot.text} onChange={e => setScenes(prev => prev.map((it, i) => i === selectedShotIdx ? { ...it, text: e.target.value } : it))} />
-                        <input className="studio-input" value={activeShot.query} onChange={e => setScenes(prev => prev.map((it, i) => i === selectedShotIdx ? { ...it, query: e.target.value, visual_prompt: e.target.value } : it))} />
-                        <div style={{ display: 'flex', gap: '5px' }}>
-                          <button onClick={() => handleRerollShot(selectedShotIdx)} className="pill-btn" style={{ padding: '9px 11px', color: '#D9FF00', fontSize: '0.75rem', fontWeight: 700 }}><RefreshCw size={13} /></button>
-                          <button onClick={() => { setScenes(prev => prev.filter((_, i) => i !== selectedShotIdx)); setSelectedShotIdx(0); }} className="pill-btn" style={{ padding: '9px', color: '#ef4444' }}><Trash2 size={14} /></button>
+                      <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px' }}>
+                        <input className="studio-input" value={activeShot.text} onChange={e => setScenes(prev => prev.map((it, i) => i === selectedShotIdx ? { ...it, text: e.target.value } : it))} aria-label="Shot narration" />
+                        <input className="studio-input" value={activeShot.query} onChange={e => setScenes(prev => prev.map((it, i) => i === selectedShotIdx ? { ...it, query: e.target.value, visual_prompt: e.target.value } : it))} aria-label="Shot visual query" />
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button type="button" aria-label="Re-roll selected shot" onClick={() => handleRerollShot(selectedShotIdx)} className="pill-btn" style={{ padding: '0 12px', color: 'var(--accent)' }}><RefreshCw size={14} /></button>
+                          <button type="button" aria-label="Delete selected shot" onClick={() => { setScenes(prev => prev.filter((_, i) => i !== selectedShotIdx)); setSelectedShotIdx(0); }} className="pill-btn" style={{ padding: '0 12px', color: 'var(--danger)' }}><Trash2 size={14} /></button>
                         </div>
                       </div>
                     )}
@@ -637,60 +699,72 @@ export default function Home() {
             </section>
 
             {/* RIGHT INSPECTOR */}
-            <aside className="glass-panel" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: 'calc(100vh - 90px)', overflowY: 'auto' }}>
+            <aside className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: 'calc(100vh - 96px)', overflowY: 'auto' }}>
               <div>
-                <div className="mono" style={{ fontSize: '0.7rem', color: '#D9FF00', letterSpacing: '0.08em', marginBottom: '8px' }}>05 / VIRAL CAPTIONS</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                <div className="mono caption-3" style={{ color: 'var(--accent)', letterSpacing: '0.08em', marginBottom: '10px' }}>05 / VIRAL CAPTIONS</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                   {CAPTION_PRESETS.map(cp => (
-                    <button key={cp.id} onClick={() => setCaptionStyle(cp.id)} className={`camera-card ${captionStyle === cp.id ? 'active' : ''}`} style={{ textAlign: 'center', padding: '10px 6px' }}>
-                      <div style={{ fontWeight: 900, fontSize: '0.92rem', color: cp.accent, textShadow: '0 2px 6px #000' }}>{cp.sample}</div>
-                      <div style={{ fontSize: '0.66rem', color: '#a1a1aa', marginTop: '3px' }}>{cp.name}</div>
+                    <button key={cp.id} type="button" onClick={() => setCaptionStyle(cp.id)} className={`camera-card ${captionStyle === cp.id ? 'active' : ''}`} style={{ textAlign: 'center', padding: '10px 6px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: cp.accent, textShadow: '0 2px 6px #000' }}>{cp.sample}</div>
+                      <div className="caption-4" style={{ marginTop: '3px', fontSize: '11px' }}>{cp.name}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span className="mono" style={{ fontSize: '0.7rem', color: '#D9FF00', letterSpacing: '0.08em' }}>06 / VOICE DIRECTOR</span>
-                  <button onClick={toggleAllVoices} style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}><Globe size={12} /> {allVoicesMode ? 'Top 6' : 'All 318'}</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <span className="mono caption-3" style={{ color: 'var(--accent)', letterSpacing: '0.08em' }}>06 / VOICE DIRECTOR</span>
+                  <button type="button" onClick={toggleAllVoices} style={{ background: 'none', border: 'none', color: 'var(--info)', fontSize: '12px', cursor: 'pointer', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <Globe size={12} /> {allVoicesMode ? 'Top 6' : 'All 318'}
+                  </button>
                 </div>
-                {allVoicesMode && <input className="studio-input" placeholder="Filter language..." value={voiceFilter} onChange={e => setVoiceFilter(e.target.value)} style={{ marginBottom: '7px', padding: '7px 10px', fontSize: '0.78rem' }} />}
-                <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
-                  <select className="studio-input" value={selectedVoice} onChange={e => setSelectedVoice(e.target.value)} style={{ flex: 1, padding: '8px 10px', fontSize: '0.8rem' }}>
+                {allVoicesMode && <input className="studio-input" placeholder="Filter language (en, es, hi, ar)..." value={voiceFilter} onChange={e => setVoiceFilter(e.target.value)} style={{ marginBottom: '8px' }} />}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  <select className="studio-input" value={selectedVoice} onChange={e => setSelectedVoice(e.target.value)} style={{ flex: 1 }} aria-label="Select voice">
                     {filteredVoices.slice(0, 100).map(v => <option key={v.id} value={v.id}>{v.name} ({v.locale})</option>)}
                   </select>
-                  <button onClick={handleAuditionVoice} className="pill-btn" style={{ padding: '0 11px', color: '#D9FF00' }}><Volume2 size={15} /></button>
+                  <button type="button" onClick={handleAuditionVoice} aria-label="Audition selected voice" className="pill-btn" style={{ padding: '0 12px', color: 'var(--accent)' }}><Volume2 size={16} /></button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '5px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
                   {[{ r: '+0%', l: '1.0x' }, { r: '+8%', l: '1.08x' }, { r: '+15%', l: '1.15x' }, { r: '+22%', l: '1.22x' }].map(sp => (
-                    <button key={sp.r} onClick={() => setVoiceRate(sp.r)} className={`pill-btn mono ${voiceRate === sp.r ? 'active' : ''}`} style={{ padding: '5px', fontSize: '0.7rem', fontWeight: 700 }}>{sp.l}</button>
+                    <button key={sp.r} type="button" onClick={() => setVoiceRate(sp.r)} className={`pill-btn mono ${voiceRate === sp.r ? 'active' : ''}`} style={{ padding: '6px', fontSize: '12px' }}>{sp.l}</button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <div className="mono" style={{ fontSize: '0.7rem', color: '#D9FF00', letterSpacing: '0.08em', marginBottom: '6px' }}>07 / RETENTION & BRAND</div>
-                <SwitchRow label="Acid-Lime Progress Bar" checked={progressBar} onChange={setProgressBar} />
-                <SwitchRow label="2.8s Hook Title Card" checked={hookBanner} onChange={setHookBanner} />
-                <SwitchRow label="Split-Screen Wave Mode" checked={splitScreen} onChange={setSplitScreen} />
-                <SwitchRow label="Cinematic Synth Bed" checked={bgMusic} onChange={setBgMusic} />
-                <input className="studio-input" value={watermark} onChange={e => setWatermark(e.target.value)} placeholder="@ChannelHandle" style={{ marginTop: '8px', padding: '8px 10px', fontSize: '0.8rem' }} />
+                <div className="mono caption-3" style={{ color: 'var(--accent)', letterSpacing: '0.08em', marginBottom: '6px' }}>07 / RETENTION & BRAND</div>
+                <AccessibleSwitch label="Acid Lime Progress Bar" checked={progressBar} onChange={setProgressBar} />
+                <AccessibleSwitch label="2.8s Hook Title Card" checked={hookBanner} onChange={setHookBanner} />
+                <AccessibleSwitch label="Split Screen Wave Mode" checked={splitScreen} onChange={setSplitScreen} />
+                <AccessibleSwitch label="Cinematic Synth Bed" checked={bgMusic} onChange={setBgMusic} />
+                <input className="studio-input" value={watermark} onChange={e => setWatermark(e.target.value)} placeholder="@ChannelHandle" style={{ marginTop: '8px' }} aria-label="Channel watermark" />
               </div>
 
-              <button onClick={handleRenderCinemaVideo} disabled={generating} className="volt-btn" style={{ width: '100%', padding: '14px', borderRadius: '12px', fontSize: '0.92rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <Zap size={17} fill="#050507" /> {generating ? 'RENDERING...' : 'RENDER CINEMA VIDEO'}
+              <button type="button" onClick={handleRenderCinemaVideo} disabled={generating} className="volt-btn" style={{ width: '100%', minHeight: '48px' }}>
+                <Zap size={16} fill="var(--on-accent)" /> {generating ? 'Rendering...' : 'Render Cinema Video'}
               </button>
 
               {videoList.length > 0 && (
                 <div>
-                  <div className="mono" style={{ fontSize: '0.68rem', color: '#71717a', marginBottom: '6px' }}>LIBRARY ({videoList.length})</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '150px', overflowY: 'auto' }}>
+                  <div className="mono caption-4" style={{ marginBottom: '8px' }}>LIBRARY ({videoList.length})</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '150px', overflowY: 'auto' }}>
                     {videoList.map(v => (
-                      <div key={v.id} onClick={() => { setCurrentVideo(v); setViewportMode('video'); }} style={{ padding: '7px 9px', borderRadius: '9px', cursor: 'pointer', background: currentVideo?.id === v.id ? 'rgba(217,255,0,0.1)' : 'rgba(255,255,255,0.03)', border: currentVideo?.id === v.id ? '1px solid rgba(217,255,0,0.4)' : '1px solid transparent', display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem' }}>
-                        <span style={{ color: '#e4e4e7', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '205px' }}>{v.title}</span>
-                        <span className="mono" style={{ color: '#D9FF00', fontSize: '0.68rem' }}>{v.duration}s</span>
-                      </div>
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => { setCurrentVideo(v); setViewportMode('video'); }}
+                        style={{
+                          padding: '8px 10px', borderRadius: '8px', cursor: 'pointer', textAlign: 'left',
+                          background: currentVideo?.id === v.id ? 'rgba(217,255,0,0.1)' : 'rgba(255,255,255,0.03)',
+                          border: currentVideo?.id === v.id ? '1px solid rgba(217,255,0,0.4)' : '1px solid transparent',
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%'
+                        }}
+                      >
+                        <span className="caption-3" style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{v.title}</span>
+                        <span className="mono caption-4" style={{ color: 'var(--accent)' }}>{v.duration}s</span>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -701,31 +775,38 @@ export default function Home() {
 
         {/* AUTOPILOT CHANNELS */}
         {activeTool === 'autopilot' && (
-          <div style={{ maxWidth: '1280px', width: '100%', margin: '24px auto', padding: '0 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <div className="glass-panel" style={{ padding: '20px' }}>
-              <h2 className="heading-font" style={{ margin: '0 0 6px', fontSize: '1.25rem' }}>Faceless Autopilot Channels</h2>
-              <div style={{ display: 'flex', gap: '8px', margin: '14px 0' }}>
+          <div style={{ maxWidth: '1240px', width: '100%', margin: '24px auto', padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div className="glass-panel" style={{ padding: '24px' }}>
+              <h2 className="heading-5" style={{ marginBottom: '16px' }}>Faceless Autopilot Channels</h2>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                 <input className="studio-input" placeholder="Channel Name..." value={newChannelName} onChange={e => setNewChannelName(e.target.value)} />
-                <button onClick={handleCreateChannel} className="volt-btn" style={{ padding: '0 18px', borderRadius: '10px', whiteSpace: 'nowrap', fontSize: '0.82rem' }}>+ Launch Channel</button>
+                <button type="button" onClick={handleCreateChannel} className="volt-btn" style={{ whiteSpace: 'nowrap' }}>Launch Channel</button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {channels.map(ch => (
                   <div key={ch.id} className="camera-card" style={{ padding: '14px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}><strong style={{ color: '#fff' }}>{ch.name}</strong><span className="mono" style={{ fontSize: '0.68rem', color: '#D9FF00' }}>● {ch.status.toUpperCase()}</span></div>
-                    <div style={{ fontSize: '0.78rem', color: '#a1a1aa' }}>{ch.niche} • {ch.frequency} • {ch.platforms.join(', ').toUpperCase()}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span className="title-4" style={{ color: 'var(--text)', fontWeight: 600 }}>{ch.name}</span>
+                      <span className="mono caption-3" style={{ color: 'var(--accent)' }}>{ch.status.toUpperCase()}</span>
+                    </div>
+                    <div className="caption-4">{ch.niche} • {ch.frequency} • {ch.platforms.join(', ').toUpperCase()}</div>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="glass-panel" style={{ padding: '20px' }}>
-              <h2 className="heading-font" style={{ margin: '0 0 14px', fontSize: '1.25rem' }}>Live Publishing Queue</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="glass-panel" style={{ padding: '24px' }}>
+              <h2 className="heading-5" style={{ marginBottom: '16px' }}>Live Publishing Queue</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {scheduledPosts.map(p => (
                   <div key={p.id} className="camera-card" style={{ padding: '14px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><strong style={{ color: '#fff' }}>{p.video_title}</strong><span className="mono" style={{ fontSize: '0.68rem', color: '#D9FF00' }}>{p.status.toUpperCase()}</span></div>
-                    <div className="mono" style={{ fontSize: '0.72rem', color: '#71717a', marginTop: '4px' }}>{p.publish_time} • {p.platforms.join(', ').toUpperCase()}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span className="title-4" style={{ color: 'var(--text)', fontWeight: 600 }}>{p.video_title}</span>
+                      <span className="mono caption-3" style={{ color: 'var(--accent)' }}>{p.status.toUpperCase()}</span>
+                    </div>
+                    <div className="mono caption-4" style={{ marginTop: '4px' }}>{p.publish_time} • {p.platforms.join(', ').toUpperCase()}</div>
                   </div>
                 ))}
+                {scheduledPosts.length === 0 && <div className="body-5">No scheduled posts yet.</div>}
               </div>
             </div>
           </div>
@@ -733,18 +814,23 @@ export default function Home() {
 
         {/* IDEAS */}
         {activeTool === 'ideas' && (
-          <div style={{ maxWidth: '1160px', width: '100%', margin: '24px auto', padding: '0 20px' }}>
-            <div className="glass-panel" style={{ padding: '22px' }}>
-              <h2 className="heading-font" style={{ margin: '0 0 12px', fontSize: '1.3rem' }}>Viral Topic & Hook Engine</h2>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '18px' }}>
-                {niches.map(n => <button key={n.id} onClick={() => loadIdeas(n.id)} className="pill-btn" style={{ padding: '7px 14px', fontSize: '0.78rem', fontWeight: 600, color: '#fff' }}>{n.name}</button>)}
+          <div style={{ maxWidth: '1160px', width: '100%', margin: '24px auto', padding: '0 24px' }}>
+            <div className="glass-panel" style={{ padding: '24px' }}>
+              <h2 className="heading-5" style={{ marginBottom: '16px' }}>Viral Topic & Hook Engine</h2>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                {niches.map(n => <button key={n.id} type="button" onClick={() => loadIdeas(n.id)} className="pill-btn" style={{ padding: '8px 14px', fontSize: '13px', color: 'var(--text)' }}>{n.name}</button>)}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {ideas.map((idea, i) => (
-                  <div key={i} className="camera-card" style={{ padding: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}><strong style={{ color: '#fff' }}>{idea.title}</strong><span className="mono" style={{ color: '#D9FF00' }}>{idea.viral_score}%</span></div>
-                    <p style={{ color: '#a1a1aa', fontSize: '0.82rem', margin: '0 0 14px' }}>"{idea.hook}"</p>
-                    <button onClick={() => { setCustomTopic(idea.title); setScenes([]); setActiveTool('cinema_studio'); }} className="volt-btn" style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '0.76rem' }}>Direct This Story →</button>
+                  <div key={i} className="camera-card" style={{ padding: '18px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span className="title-3" style={{ color: 'var(--text)', fontWeight: 600 }}>{idea.title}</span>
+                      <span className="mono caption-3" style={{ color: 'var(--accent)' }}>{idea.viral_score}%</span>
+                    </div>
+                    <p className="body-5" style={{ margin: '0 0 16px' }}>"{idea.hook}"</p>
+                    <button type="button" onClick={() => { setCustomTopic(idea.title); setScenes([]); setActiveTool('cinema_studio'); }} className="volt-btn">
+                      Direct Story <ArrowRight size={14} />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -754,13 +840,16 @@ export default function Home() {
 
         {/* AUDIO VISUALIZER */}
         {activeTool === 'audio_visualizer' && (
-          <div style={{ maxWidth: '640px', width: '100%', margin: '32px auto', padding: '0 20px' }}>
+          <div style={{ maxWidth: '640px', width: '100%', margin: '32px auto', padding: '0 24px' }}>
             <div className="glass-panel" style={{ padding: '24px' }}>
-              <h2 className="heading-font" style={{ margin: '0 0 8px', fontSize: '1.3rem' }}>Spotify & Music Audio Visualizer</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '14px' }}>
+              <h2 className="heading-5" style={{ marginBottom: '8px' }}>Spotify & Music Audio Visualizer</h2>
+              <p className="body-5" style={{ margin: '0 0 16px' }}>Upload an MP3 or WAV track to render an audio reactive vertical waveform video.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <input className="studio-input" value={vizTitle} onChange={e => setVizTitle(e.target.value)} />
                 <input className="studio-input" type="file" accept="audio/*" onChange={e => setVizFile(e.target.files?.[0] || null)} />
-                <button onClick={handleGenerateVisualizer} disabled={vizLoading} className="volt-btn" style={{ padding: '12px', borderRadius: '10px' }}>{vizLoading ? 'RENDERING...' : 'RENDER AUDIO VISUALIZER'}</button>
+                <button type="button" onClick={handleGenerateVisualizer} disabled={vizLoading} className="volt-btn">
+                  <Music size={16} /> {vizLoading ? 'Rendering Waveform...' : 'Render Audio Visualizer'}
+                </button>
               </div>
             </div>
           </div>
@@ -768,15 +857,15 @@ export default function Home() {
 
         {/* SETTINGS */}
         {activeTool === 'settings' && (
-          <div style={{ maxWidth: '720px', width: '100%', margin: '24px auto', padding: '0 20px' }}>
-            <div className="glass-panel" style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <h2 className="heading-font" style={{ margin: 0, fontSize: '1.25rem' }}>Live Publishing Webhooks & API Keys</h2>
+          <div style={{ maxWidth: '720px', width: '100%', margin: '24px auto', padding: '0 24px' }}>
+            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <h2 className="heading-5">Live Publishing Webhooks & API Keys</h2>
+              <p className="body-5" style={{ margin: 0 }}>Saved persistently in SQLite. Connect Make, Zapier, or n8n to push rendered videos live.</p>
               <input className="studio-input" value={watermark} onChange={e => setWatermark(e.target.value)} placeholder="Default Watermark (@handle)" />
               <input className="studio-input" value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="Live Publish Webhook (Make / Zapier / n8n)" />
               <input className="studio-input" type="password" value={pexelsKey} onChange={e => setPexelsKey(e.target.value)} placeholder="Pexels Free API Key (Optional)" />
               <input className="studio-input" type="password" value={groqKey} onChange={e => setGroqKey(e.target.value)} placeholder="Groq Free API Key (Optional)" />
-              <button onClick={handleSaveSettings} className="volt-btn" style={{ padding: '12px', borderRadius: '10px' }}>SAVE PERSISTENT CONNECTORS</button>
-              {settingsSaved && <div className="mono" style={{ color: '#D9FF00', fontSize: '0.76rem' }}>✓ Saved!</div>}
+              <button type="button" onClick={handleSaveSettings} className="volt-btn">Save Persistent Connectors</button>
             </div>
           </div>
         )}
