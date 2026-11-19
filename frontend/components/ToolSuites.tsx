@@ -10,6 +10,10 @@ const API_BASE = 'http://127.0.0.1:8000';
 
 export type ActiveTool =
   | 'explore'
+  | 'all_generators'
+  | 'hyperframes_studio'
+  | 'script_to_video'
+  | 'lyric_video'
   | 'cinema_studio'
   | 'image_create' | 'image_edit' | 'image_upscale' | 'soul_character' | 'mangaka'
   | 'video_edit' | 'video_upscale' | 'video_reframe' | 'click_to_ad' | 'genjutsu' | 'short_drama' | 'content_factory'

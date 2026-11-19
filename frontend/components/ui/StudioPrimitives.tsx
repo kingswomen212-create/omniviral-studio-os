@@ -95,6 +95,10 @@ interface PaletteItem {
 
 const ALL_COMMANDS: PaletteItem[] = [
   { id: 'explore', name: 'Explore Showcase Hub', category: 'Home', desc: 'Overview of all studios, live telemetry & recent reels', icon: <Sparkles size={16} /> },
+  { id: 'all_generators', name: 'All 24 AI Video Generators', category: 'Tools', desc: 'True Crime, POV, Documentary, Kids, Anatomy, Explainer & more', icon: <Zap size={16} /> },
+  { id: 'hyperframes_studio', name: 'HyperFrames 60fps Motion Studio', category: 'Motion', desc: 'Code driven 60fps kinetic typography, stat cards & -14 LUFS audio', icon: <Sparkles size={16} /> },
+  { id: 'script_to_video', name: 'Script to Video AI', category: 'Workflow', desc: 'Paste any script for auto scene split, 10 art styles & 4K export', icon: <Film size={16} /> },
+  { id: 'lyric_video', name: 'AI Lyric Video Maker', category: 'Music', desc: 'Sync bold animated lyrics over reactive music waveforms', icon: <Music size={16} /> },
   { id: 'cinema_studio', name: 'Cinema Studio & Faceless Shorts', category: 'Video', desc: '7 Camera Rigs, ARRI/Kodak Optics, LUTs & Viral Captions', icon: <Film size={16} /> },
   { id: 'image_create', name: 'Create Image (Soul 2.0)', category: 'Image', desc: 'Generate styled high resolution cinema visuals', icon: <ImageIcon size={16} /> },
   { id: 'image_edit', name: 'Edit Image & LUT Grade', category: 'Image', desc: 'Color grade photos & add poster typography', icon: <Wand2 size={16} /> },
