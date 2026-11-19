@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+backend/venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build outputs
+frontend/.next/
+frontend/out/
+dist/
+build/
+
+# Runtime generated media & local SQLite DB
+backend/output/
+backend/*.db
+*.mp4
+*.mp3
+*.ass
+*.wav
+
+# Environment & IDE
+.env
+.env.local
+.envrc
+.DS_Store
+.idea/
+.vscode/
