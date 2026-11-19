@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import ToolSuites, { ActiveTool } from '../components/ToolSuites';
 import HyperGenerators, { GeneratorPreset, GLOBAL_VOICE_CHIPS } from '../components/HyperGenerators';
+import SuperSuite from '../components/SuperSuite';
 import {
   DotGridLoader,
   AccessibleSwitch,
@@ -117,7 +118,10 @@ const MEGA_MENUS: Record<string, { title: string; items: { id: ActiveTool; name:
       { id: 'image_edit', name: 'Edit Image', desc: 'Cinema LUTs, contrast, saturation & poster titles' },
       { id: 'soul_character', name: 'Soul ID & AI Influencer', desc: 'Consistent characters: hairstyle, outfit & cast vault', tag: 'NEW' },
       { id: 'image_upscale', name: '4K Image Upscale', desc: '2x and 4x Lanczos super resolution enhancer' },
-      { id: 'mangaka', name: 'Mangaka Studio', desc: 'Turn ideas into 3 panel vertical Manga / Webtoons', tag: 'NEW' }
+      { id: 'mangaka', name: 'Mangaka Studio', desc: 'Turn ideas into 3 panel vertical Manga / Webtoons', tag: 'NEW' },
+      { id: 'logo_generator', name: 'AI Logo Generator', desc: 'Scalable SVG & 1024px PNG channel logo kits', tag: 'CAPCUT' },
+      { id: 'remove_bg', name: 'Remove Background', desc: 'Extract clean transparent RGBA PNG cutouts' },
+      { id: 'meme_maker', name: 'Meme Maker', desc: 'Bold top & bottom viral captions for images or MP4s' }
     ]
   },
   video: {
@@ -131,7 +135,10 @@ const MEGA_MENUS: Record<string, { title: string; items: { id: ActiveTool; name:
       { id: 'video_upscale', name: '4K Video Upscale', desc: 'Upscale any video to sharp 2160p cinema quality' },
       { id: 'video_reframe', name: 'Smart Reframe', desc: 'Convert 16:9, 9:16 & 1:1 with blurred fill' },
       { id: 'click_to_ad', name: 'Click to Ad', desc: 'Store URL & product into high converting ad video', tag: 'E-COM' },
-      { id: 'genjutsu', name: 'Genjutsu & Lipsync', desc: 'Remake reference video preserving motion & timing', tag: 'NEW' }
+      { id: 'genjutsu', name: 'Genjutsu & Lipsync', desc: 'Remake reference video preserving motion & timing', tag: 'NEW' },
+      { id: 'clipping_agent', name: 'Clipping Agent', desc: 'Long video in → viral 9:16 clips out automatically', tag: 'EROMIFY' },
+      { id: 'video_translate', name: 'Video Translate & Dub', desc: 'Translate & dub any MP4 into 9+ languages', tag: 'HEYGEN' },
+      { id: 'convert_compress', name: 'Convert & Compress MP4', desc: 'MOV/MKV/WEBM → optimized small H.264 MP4', tag: 'CAPCUT' }
     ]
   },
   audio: {
@@ -152,7 +159,11 @@ const MEGA_MENUS: Record<string, { title: string; items: { id: ActiveTool; name:
       { id: 'click_to_ad', name: 'Marketing Studio', desc: 'Commerce URL to Ad commercial video builder' },
       { id: 'autopilot', name: 'Faceless Studio (Autopilot)', desc: 'Multi channel automated publishing workspace' },
       { id: 'short_drama', name: 'Short Drama Studio', desc: 'Dual actor vertical drama episodes in Anamorphic', tag: 'NEW' },
-      { id: 'content_factory', name: 'Content Factory', desc: 'Batch render 3 complete videos in one click', tag: 'SCALE' }
+      { id: 'content_factory', name: 'Content Factory', desc: 'Batch render 3 complete videos in one click', tag: 'SCALE' },
+      { id: 'video_agent', name: 'Autonomous Video Agent', desc: 'One plain English prompt → full directed cinema MP4', tag: 'AGENT' },
+      { id: 'photo_avatar', name: 'Photo Avatar Studio', desc: 'Bring any portrait photo to life with voice & motion', tag: 'HEYGEN' },
+      { id: 'video_podcast', name: 'AI Video Podcast Studio', desc: 'Dual host 16:9 studio podcast with synced captions', tag: '2 HOSTS' },
+      { id: 'ppt_to_video', name: 'PPT & Slides to Video', desc: 'Turn presentation slides into narrated 16:9 videos', tag: 'SLIDES' }
     ]
   }
 };
@@ -547,6 +558,14 @@ export default function Home() {
         <HyperGenerators
           activeTool={activeTool}
           onSelectGenerator={handleSelectGenerator}
+          onNotify={notify}
+          onVideoCreated={(v) => { setCurrentVideo(v); setVideoList(prev => [v, ...prev]); }}
+        />
+
+        {/* CAPCUT, EROMIFY & HEYGEN SUPER SUITE (10 TOOLS) */}
+        <SuperSuite
+          activeTool={activeTool}
+          voices={voices}
           onNotify={notify}
           onVideoCreated={(v) => { setCurrentVideo(v); setVideoList(prev => [v, ...prev]); }}
         />
