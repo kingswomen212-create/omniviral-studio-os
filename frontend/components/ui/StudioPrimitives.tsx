@@ -109,6 +109,12 @@ const ALL_COMMANDS: PaletteItem[] = [
   { id: 'logo_generator', name: 'AI Logo & Channel Brand Kit', category: 'Image', desc: 'Generate scalable SVG & 1024px PNG channel logos instantly', icon: <Wand2 size={16} /> },
   { id: 'remove_bg', name: 'Remove Background (Transparent PNG)', category: 'Image', desc: 'Extract RGBA transparent PNG from dark, light or green screen', icon: <Maximize2 size={16} /> },
   { id: 'convert_compress', name: 'Convert to MP4 & Smart Compressor', category: 'Utilities', desc: 'Convert MOV/MKV/WEBM to H.264 MP4 & shrink file size', icon: <Zap size={16} /> },
+  { id: 'blender_3d', name: 'Chat to 3D & Blender Scene Studio', category: '3D', desc: 'Interactive 360 degree 3D viewport + Blender 4.x Python (bpy) export', icon: <Sparkles size={16} /> },
+  { id: 'web_3d_builder', name: 'Interactive 3D Website Builder', category: 'Web 3D', desc: 'Generate standalone mouse reactive 3D HTML landing pages', icon: <Terminal size={16} /> },
+  { id: 'envato_templates', name: '60fps Video Templates (Logo, Lower Thirds, VJ)', category: 'Templates', desc: 'Logo Reveals, Breaking News, Trailers, VJ Loops & Infographics', icon: <Film size={16} /> },
+  { id: 'envato_sfx', name: 'Sound Effects (SFX) Synthesizer Board', category: 'Audio', desc: '10 royalty free cinema SFX: Whoosh, Boom, Riser, Laser, Gaming, Rain', icon: <AudioWaveform size={16} /> },
+  { id: 'envato_stock', name: 'Stock Media, B-Roll & Textures Explorer', category: 'Assets', desc: 'Live search across 800M+ free Creative Commons HD photos & textures', icon: <ImageIcon size={16} /> },
+  { id: 'envato_graphics', name: 'Graphics, Mesh Gradients & Film Overlays', category: 'Graphics', desc: 'Generate 1080p gradients, film dust overlays, palettes & 1200x630 banners', icon: <Wand2 size={16} /> },
   { id: 'cinema_studio', name: 'Cinema Studio & Faceless Shorts', category: 'Video', desc: '7 Camera Rigs, ARRI/Kodak Optics, LUTs & Viral Captions', icon: <Film size={16} /> },
   { id: 'image_create', name: 'Create Image (Soul 2.0)', category: 'Image', desc: 'Generate styled high resolution cinema visuals', icon: <ImageIcon size={16} /> },
   { id: 'image_edit', name: 'Edit Image & LUT Grade', category: 'Image', desc: 'Color grade photos & add poster typography', icon: <Wand2 size={16} /> },
@@ -247,23 +253,69 @@ export function ExploreShowcase({
   onLaunchTool: (t: ActiveTool) => void;
   onSelectVideo: (v: any) => void;
 }) {
+  const hero3dRef = React.useRef<HTMLCanvasElement | null>(null);
+  const mouseRef = React.useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let raf = 0;
+    const pts: { x: number; y: number; z: number }[] = [];
+    for (let i = 0; i < 120; i++) {
+      const u = (i / 120) * Math.PI * 2;
+      const v = ((i % 12) / 12) * Math.PI * 2;
+      pts.push({ x: (2.1 + 0.72 * Math.cos(v)) * Math.cos(u), y: (2.1 + 0.72 * Math.cos(v)) * Math.sin(u), z: 0.72 * Math.sin(v) });
+    }
+    const draw = (t: number) => {
+      const cv = hero3dRef.current;
+      if (!cv) return;
+      const ctx = cv.getContext('2d');
+      if (!ctx) return;
+      const W = cv.width, H = cv.height;
+      ctx.clearRect(0, 0, W, H);
+      const ay = t * 0.00045 + mouseRef.current.x * 0.7;
+      const ax = t * 0.00028 + mouseRef.current.y * 0.5;
+      const cy = Math.cos(ay), sy = Math.sin(ay), cx = Math.cos(ax), sx = Math.sin(ax);
+      const proj = pts.map(p => {
+        const x1 = p.x * cy - p.z * sy;
+        const z1 = p.x * sy + p.z * cy;
+        const y2 = p.y * cx - z1 * sx;
+        const z2 = p.y * sx + z1 * cx + 6.2;
+        const f = 310 / z2;
+        return { x: W * 0.78 + x1 * f, y: H * 0.48 + y2 * f };
+      });
+      ctx.strokeStyle = 'rgba(217, 255, 0, 0.24)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < proj.length; i++) {
+        const a = proj[i], b = proj[(i + 1) % proj.length], c2 = proj[(i + 12) % proj.length];
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c2.x, c2.y); ctx.stroke();
+        ctx.fillStyle = 'rgba(217, 255, 0, 0.75)';
+        ctx.fillRect(a.x - 1.2, a.y - 1.2, 2.4, 2.4);
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   const highlights: { id: ActiveTool; title: string; badge: string; desc: string; icon: React.ReactNode }[] = [
     { id: 'cinema_studio', title: 'Cinema Studio 3.0', badge: 'FLAGSHIP', desc: 'Deterministic camera rigs, ARRI & 35mm optics, Color LUTs, Hero Filmstrip & 122px viral captions.', icon: <Film size={20} color="var(--accent)" /> },
     { id: 'click_to_ad', title: 'Marketing Click to Ad', badge: 'E-COMMERCE', desc: 'Paste any store URL and price to render a vertical commercial ad with CTA overlay.', icon: <ShoppingBag size={20} color="var(--accent)" /> },
     { id: 'short_drama', title: 'Short Drama Studio', badge: 'NEW', desc: 'Dual actor vertical series with separate neural voices, Anamorphic 2.39 optics & Moody A24 grade.', icon: <Clapperboard size={20} color="var(--accent)" /> },
     { id: 'soul_character', title: 'Soul ID & AI Influencer', badge: 'CAST VAULT', desc: 'Create persistent AI influencers with hairstyle, outfit & ethnicity locked across projects.', icon: <UserCheck size={20} color="var(--accent)" /> },
-    { id: 'mangaka', title: 'Mangaka Webtoon Engine', badge: 'COMICS', desc: 'Convert story beats into high contrast 3 panel vertical manga & webtoon strips.', icon: <BookOpen size={20} color="var(--accent)" /> },
+    { id: 'blender_3d', title: 'Chat to 3D & Blender Studio', badge: '3D + BPY', desc: 'Interactive 360 degree 3D viewport + downloadable Blender 4.x Cycles Python scripts.', icon: <Wand2 size={20} color="var(--accent)" /> },
+    { id: 'web_3d_builder', title: 'Interactive 3D Web Builder', badge: 'WEB 3D', desc: 'Generate mouse reactive 3D landing pages ready for instant single file deployment.', icon: <Terminal size={20} color="var(--accent)" /> },
     { id: 'mcp_hub', title: 'MCP Server & CLI', badge: 'AGENTIC', desc: 'Trigger cinema renders directly from Claude, Claude Code, ChatGPT, Cursor & Telegram.', icon: <Terminal size={20} color="var(--accent)" /> }
   ];
 
   return (
     <div style={{ maxWidth: '1440px', width: '100%', margin: '0 auto', padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
       {/* Hero Section */}
-      <section className="glass-panel" style={{ padding: '48px 36px', position: 'relative', overflow: 'hidden' }}>
+      <section className="glass-panel" style={{ padding: '48px 36px', position: 'relative', overflow: 'hidden' }} onMouseMove={e => { const r = e.currentTarget.getBoundingClientRect(); mouseRef.current = { x: ((e.clientX - r.left) / r.width - 0.5) * 2, y: ((e.clientY - r.top) / r.height - 0.5) * 2 }; }}>
+        <canvas ref={hero3dRef} width={1100} height={420} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />
         <div style={{ maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start', padding: '4px 12px', borderRadius: '999px', background: 'rgba(217,255,0,0.1)', border: '1px solid rgba(217,255,0,0.28)' }}>
             <span className="live-dot" />
-            <span className="mono caption-3" style={{ color: 'var(--accent)' }}>OMNIVIRAL STUDIO OS v5.0 • ZERO API COST ENGINE</span>
+            <span className="mono caption-3" style={{ color: 'var(--accent)' }}>OMNIVIRAL STUDIO OS v8.0 • 45+ AI TOOLS • 3D & BLENDER</span>
           </div>
           <h1 className="heading-2" style={{ color: 'var(--text)' }}>
             Direct cinema grade AI videos, ads, and faceless channels on autopilot.

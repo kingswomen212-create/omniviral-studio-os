@@ -237,5 +237,5 @@ async def stream_file(filename: str):
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     ext = file_path.suffix.lower()
-    media_type = {".mp4": "video/mp4", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".svg": "image/svg+xml", ".mp3": "audio/mpeg", ".wav": "audio/wav"}.get(ext, "application/octet-stream")
+    media_type = {".mp4": "video/mp4", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".svg": "image/svg+xml", ".mp3": "audio/mpeg", ".wav": "audio/wav", ".py": "text/x-python", ".html": "text/html"}.get(ext, "application/octet-stream")
     return FileResponse(path=file_path, media_type=media_type, filename=filename)
