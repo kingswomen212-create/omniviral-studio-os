@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers import videos, scripts, voices, schedule, studio_tools, super_suite, envato_3d_suite, motion_studio, engine_studio
 
 app = FastAPI(
-    title="OmniViral Studio OS v10.0 — GPU Cinema Render Engine, Agent Two & Commercial Motion OS",
-    description="Zero-Cost All-in-One Creative AI OS: Higgsfield × AITuber × HyperFrames × CapCut × Eromify × HeyGen × Envato × 3D Blender & Web × 60fps Commercial Motion × InVideo Agent Two GPU Render Engine.",
-    version="10.0.0"
+    title="OmniViral Studio OS v11.0 — Real AI Video Diffusion, 4K Cinema Footage & GPU Render OS",
+    description="All-in-One Creative AI OS: Real Generative Video Diffusion (Seedance/Kling/Wan/MiniMax), 4K Moving Stock Video (Pexels/Pixabay), FLUX.1, 60fps Commercial Motion, GPU Render Engine & Agent Two.",
+    version="11.0.0"
 )
 
 app.add_middleware(
@@ -30,7 +30,7 @@ app.include_router(engine_studio.router, prefix="/api")
 async def health_check():
     return {
         "status": "healthy",
-        "version": "10.0.0",
+        "version": "11.0.0",
         "suites": [
             "image", "video", "audio", "studios", "hyperframes", "agents",
             "utilities", "envato_assets", "3d_blender", "3d_web",

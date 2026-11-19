@@ -1,7 +1,5 @@
 import asyncio
 import concurrent.futures
-import io
-import math
 import os
 import re
 import subprocess
@@ -10,19 +8,13 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import httpx
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from app.core.config import MUSIC_DIR, OUTPUT_DIR
+from app.core.config import OUTPUT_DIR
 from app.services.audio_engine import AudioEngine
-from app.services.motion_gfx_engine import (
-    MotionGraphicsEngine,
-    _load_font,
-    draw_4point_sparkle,
-    hex_to_rgb,
-)
+from app.services.cinema_media_engine import CinemaMediaEngine, get_active_media_providers
+from app.services.motion_gfx_engine import _load_font
 from app.services.subtitle_service import SubtitleService
-from app.services.visual_service import VisualService
 from app.services.voice_service import VoiceService
 
 
@@ -32,10 +24,6 @@ _ENCODER_CACHE: Optional[Dict[str, Any]] = None
 
 
 def detect_render_capabilities(force_refresh: bool = False) -> Dict[str, Any]:
-    """
-    Probes real hardware GPU encoders (NVENC, QuickSync, AMD AMF, Windows DirectX MF)
-    and pro cinema FFmpeg mastering filters (FidelityFX CAS, Deband, HQDN3D, Optical Flow).
-    """
     global _ENCODER_CACHE
     if _ENCODER_CACHE is not None and not force_refresh:
         return _ENCODER_CACHE
@@ -52,7 +40,7 @@ def detect_render_capabilities(force_refresh: bool = False) -> Dict[str, Any]:
         t0 = time.perf_counter()
         r = subprocess.run(
             [
-                "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+                "ffmpeg", "-nostdin", "-y", "-hide_banner", "-loglevel", "error",
                 "-f", "lavfi", "-i", "color=c=black:s=640x360:d=0.4:r=24",
                 "-c:v", codec, "-pix_fmt", "yuv420p", "-f", "null", "-",
             ],
@@ -63,9 +51,12 @@ def detect_render_capabilities(force_refresh: bool = False) -> Dict[str, Any]:
         if r.returncode == 0:
             available.append({"codec": codec, "label": label, "probe_ms": ms})
 
-    # Choose fastest verified hardware encoder for "gpu_fast" mode
     hw_encoders = [e for e in available if e["codec"] != "libx264"]
-    fastest_hw = min(hw_encoders, key=lambda x: x["probe_ms"]) if hw_encoders else {"codec": "libx264", "label": "CPU x264 Studio Master", "probe_ms": 300}
+    fastest_hw = (
+        min(hw_encoders, key=lambda x: x["probe_ms"])
+        if hw_encoders
+        else {"codec": "libx264", "label": "CPU x264 Studio Master", "probe_ms": 300}
+    )
 
     flt_out = subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True).stdout
     pro_filters = {}
@@ -84,18 +75,7 @@ def detect_render_capabilities(force_refresh: bool = False) -> Dict[str, Any]:
     return _ENCODER_CACHE
 
 
-def get_video_encode_args(
-    mode: str = "auto",
-    crf: int = 17,
-    bitrate: str = "10M",
-) -> List[str]:
-    """
-    Returns optimal FFmpeg H.264 video encoding flags with BT.709 studio color tags
-    and +faststart moov atom optimization.
-    - 'gpu_fast': Uses verified GPU hardware encoder (h264_mf / h264_amf / h264_nvenc)
-    - 'studio_master': Uses libx264 High Profile CRF 16-18 for maximum cinema detail
-    - 'auto': Uses GPU for fast preview/batch, or libx264 High Profile for mastering
-    """
+def get_video_encode_args(mode: str = "auto", crf: int = 17, bitrate: str = "12M") -> List[str]:
     caps = detect_render_capabilities()
     hw = caps["recommended_gpu_encoder"]
 
@@ -113,11 +93,10 @@ def get_video_encode_args(
         if hw == "h264_amf":
             return ["-c:v", "h264_amf", "-quality", "balanced", "-rc", "cqp", "-qp_i", str(crf), "-qp_p", str(crf + 1), *color_tags]
         if hw == "h264_mf":
-            return ["-c:v", "h264_mf", "-rate_control", "quality", "-quality", "88", "-b:v", bitrate, *color_tags]
+            return ["-c:v", "h264_mf", "-rate_control", "quality", "-quality", "90", "-b:v", bitrate, *color_tags]
         if hw == "h264_qsv":
             return ["-c:v", "h264_qsv", "-global_quality", str(crf), *color_tags]
 
-    # Studio Master (libx264 High Profile with multi-threading & film tuning)
     preset = "fast" if mode == "auto" else "medium"
     return [
         "-c:v", "libx264",
@@ -135,44 +114,142 @@ CINEMA_MASTER_GRADES: Dict[str, Dict[str, str]] = {
     "luxury_halation": {
         "name": "Luxury Halation & Warm Bloom (Cloud Nine / Commercial)",
         "desc": "Warm golden highlights, soft optical halation bloom, FidelityFX CAS micro-contrast & deband.",
-        "filter": "deband,colorbalance=rs=0.05:gs=0.01:bs=-0.04:rh=0.09:gh=0.03:bh=-0.06,eq=contrast=1.10:saturation=1.16:gamma=1.04,cas=0.45,vignette=PI/4.2",
+        "filter": "deband,colorbalance=rs=0.04:gs=0.01:bs=-0.03:rh=0.08:gh=0.03:bh=-0.05,eq=contrast=1.08:saturation=1.12:gamma=1.03,cas=0.45,vignette=PI/4.5",
     },
     "kodak_cinema_24": {
         "name": "Kodak 2383 Theatrical Film (24fps Cinema)",
         "desc": "Rich filmic shadow roll-off, subtle organic grain, BT.709 color separation & CAS edge detail.",
-        "filter": "deband,curves=preset=medium_contrast,colorbalance=rs=-0.02:bs=0.04:rh=0.07:bh=-0.05,eq=saturation=1.12,cas=0.42,noise=alls=5:allf=t+u,vignette=PI/3.8",
+        "filter": "deband,curves=preset=medium_contrast,colorbalance=rs=-0.02:bs=0.04:rh=0.06:bh=-0.04,eq=saturation=1.10,cas=0.42,noise=alls=4:allf=t+u,vignette=PI/4.0",
     },
     "high_roas_crisp": {
         "name": "High-ROAS Crisp Commercial (Product / E-Com)",
-        "desc": "Clean neutral whites, vivid product clarity, AMD FidelityFX CAS 0.60 micro-sharpening & zero banding.",
-        "filter": "deband,eq=contrast=1.08:brightness=0.02:saturation=1.18,cas=0.60",
+        "desc": "Clean neutral whites, vivid product clarity, AMD FidelityFX CAS 0.58 micro-sharpening & zero banding.",
+        "filter": "deband,eq=contrast=1.07:brightness=0.02:saturation=1.16,cas=0.58",
     },
     "moody_a24": {
         "name": "Moody A24 Atmospheric (Drama / Film)",
         "desc": "Deep teal shadows, sculpted skin tones, velvety shadow contrast & theatrical vignette.",
-        "filter": "deband,colorbalance=rs=-0.04:gs=0.02:bs=0.06:rm=0.02:bm=-0.03,eq=contrast=1.18:brightness=-0.03:saturation=0.84,cas=0.48,vignette=PI/3.0",
+        "filter": "deband,colorbalance=rs=-0.04:gs=0.02:bs=0.06:rm=0.02:bm=-0.03,eq=contrast=1.16:brightness=-0.03:saturation=0.85,cas=0.46,vignette=PI/3.2",
     },
     "editorial_minimal": {
         "name": "Editorial Minimalist Sunlight (Fashion / Lifestyle)",
         "desc": "Airy warm highlights, soft pastel contrast, gentle halation & silky tonal smoothness.",
-        "filter": "deband,colorbalance=rh=0.06:gh=0.04:bh=-0.02,eq=contrast=1.04:brightness=0.03:saturation=1.06:gamma=1.05,cas=0.35",
+        "filter": "deband,colorbalance=rh=0.05:gh=0.03:bh=-0.02,eq=contrast=1.04:brightness=0.02:saturation=1.05:gamma=1.04,cas=0.36",
     },
     "cyber_vfx": {
         "name": "Neon Sci-Fi & AI VFX Grade",
-        "desc": "Electric cyan-magenta split toning, deep obsidian blacks & razor-sharp FidelityFX CAS 0.65.",
-        "filter": "deband,colorbalance=rs=0.09:gs=-0.05:bs=0.14,eq=contrast=1.22:saturation=1.35,cas=0.65,vignette=PI/3.5",
+        "desc": "Electric cyan-magenta split toning, deep obsidian blacks & razor-sharp FidelityFX CAS 0.62.",
+        "filter": "deband,colorbalance=rs=0.08:gs=-0.05:bs=0.13,eq=contrast=1.20:saturation=1.32,cas=0.62,vignette=PI/3.8",
     },
 }
+
+
+# ==================== 2x SUPERSAMPLED HIGH-FASHION EDITORIAL TYPOGRAPHY ====================
+
+def _load_editorial_font(size: int, light: bool = False) -> ImageFont.FreeTypeFont:
+    paths = (
+        [r"C:\Windows\Fonts\segoeuil.ttf", r"C:\Windows\Fonts\seguisb.ttf", r"C:\Windows\Fonts\segoeui.ttf"]
+        if light
+        else [r"C:\Windows\Fonts\seguisb.ttf", r"C:\Windows\Fonts\segoeuib.ttf", r"C:\Windows\Fonts\arialbd.ttf"]
+    )
+    for p in paths:
+        if os.path.exists(p):
+            try:
+                return ImageFont.truetype(p, max(12, int(size)))
+            except Exception:
+                pass
+    return _load_font(size, bold=not light)
+
+
+def render_editorial_title_png(
+    headline: str,
+    subtitle: str,
+    width: int,
+    height: int,
+    out_path: Path,
+) -> Path:
+    """
+    Renders luxury fashion/commercial 2x-supersampled transparent PNG editorial typography
+    (inspired by Product_Showcase_1 'LINEN LIFTS YOU' — wide letter-spacing, soft ambient drop shadow,
+    subtle translucent gradient veil so text is razor-clean over ANY footage, ZERO clashing boxes!).
+    """
+    scale = 2
+    cw, ch = width * scale, height * scale
+    overlay = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+
+    # Subtle bottom-center & mid cinematic gradient veil (soft vignette readability without any harsh box!)
+    unit = min(cw, ch)
+    main_text = " ".join(list(headline.strip().upper()[:26]))  # Wide fashion tracking!
+    sub_text = subtitle.strip().upper()[:42]
+
+    f_main = _load_editorial_font(int(unit * 0.044), light=False)
+    f_sub = _load_editorial_font(int(unit * 0.022), light=True)
+
+    # Render crisp text onto shadow layer first
+    txt_layer = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+    td = ImageDraw.Draw(txt_layer)
+
+    mw = td.textlength(main_text, font=f_main)
+    # Auto-shrink slightly if too wide
+    if mw > cw * 0.86:
+        f_main = _load_editorial_font(int(unit * 0.032), light=False)
+        mw = td.textlength(main_text, font=f_main)
+
+    cy = int(ch * 0.50)
+    mx = (cw - mw) / 2.0
+
+    # Soft dark ambient glow behind letters
+    shadow_layer = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(shadow_layer)
+    sd.text((mx, cy - int(unit * 0.03)), main_text, font=f_main, fill=(0, 0, 0, 175))
+    if sub_text:
+        sw = td.textlength(sub_text, font=f_sub)
+        sx = (cw - sw) / 2.0
+        sd.text((sx, cy + int(unit * 0.045)), sub_text, font=f_sub, fill=(0, 0, 0, 165))
+    shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(radius=16))
+    overlay.alpha_composite(shadow_layer)
+
+    # Delicate luxury hairline divider + pure crisp editorial white text
+    td.text((mx, cy - int(unit * 0.03)), main_text, font=f_main, fill=(255, 255, 255, 242))
+    if sub_text:
+        line_w = min(int(mw * 0.35), int(cw * 0.22))
+        td.line([(cw / 2 - line_w / 2, cy + int(unit * 0.030)), (cw / 2 + line_w / 2, cy + int(unit * 0.030))], fill=(255, 255, 255, 130), width=2)
+        sw = td.textlength(sub_text, font=f_sub)
+        sx = (cw - sw) / 2.0
+        td.text((sx, cy + int(unit * 0.045)), sub_text, font=f_sub, fill=(245, 245, 248, 215))
+
+    overlay.alpha_composite(txt_layer)
+    overlay.resize((width, height), Image.Resampling.LANCZOS).save(str(out_path), format="PNG")
+    return out_path
+
+
+def render_minimal_brand_watermark_png(brand_name: str, width: int, height: int, out_path: Path) -> Path:
+    """Clean, subtle top-right transparent editorial watermark (never a clashing neon sticker!)."""
+    scale = 2
+    cw, ch = width * scale, height * scale
+    img = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+    unit = min(cw, ch)
+    font = _load_editorial_font(int(unit * 0.024), light=False)
+    label = brand_name.strip().upper()[:22]
+
+    sh = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(sh)
+    tw = sd.textlength(label, font=font)
+    x = cw - tw - int(cw * 0.055)
+    y = int(ch * 0.04)
+    sd.text((x, y), label, font=font, fill=(0, 0, 0, 140))
+    sh = sh.filter(ImageFilter.GaussianBlur(radius=8))
+    img.alpha_composite(sh)
+
+    ImageDraw.Draw(img).text((x, y), label, font=font, fill=(255, 255, 255, 180))
+    img.resize((width, height), Image.Resampling.LANCZOS).save(str(out_path), format="PNG")
+    return out_path
 
 
 # ==================== SELF-REVIEW & AUTO-CORRECTION QA INSPECTOR ====================
 
 def inspect_rendered_video(video_path: Path) -> Dict[str, Any]:
-    """
-    InVideo Agent Two 'Self-Review & Auto-Correction' Inspector:
-    Forensically inspects resolution, codec, FPS, bitrate, duration, BT.709 color compliance,
-    and file size to compute a real Production QA Score (0-100).
-    """
     if not video_path.exists():
         return {"passed": False, "score": 0, "issues": ["Output file missing"]}
 
@@ -213,7 +290,7 @@ def inspect_rendered_video(video_path: Path) -> Dict[str, Any]:
     if has_bt709:
         checks.append("BT.709 Studio Color Space Compliant")
     else:
-        score -= 5
+        score -= 4
 
     if has_audio:
         checks.append("Broadcast Audio Track Verified" + (" (48kHz)" if has_48k else ""))
@@ -249,14 +326,9 @@ def inspect_rendered_video(video_path: Path) -> Dict[str, Any]:
 def upscale_video_pro(
     input_path: Path,
     output_filename: str,
-    profile: str = "cas_2x",  # cas_2x | uhd_4k | optical_flow_60 | halation_remaster
+    profile: str = "cas_2x",
     encoder_mode: str = "auto",
 ) -> Dict[str, Any]:
-    """
-    Topaz Astra / ByteDance-inspired Local Detail-Preserving Video Super-Resolution Engine:
-    Multi-stage HQDN3D temporal denoise -> Lanczos accurate_rnd upscale -> AMD FidelityFX CAS
-    Contrast Adaptive Sharpening -> Deband anti-banding -> Subtle Organic Film Texture -> BT.709.
-    """
     t0 = time.perf_counter()
     before_qa = inspect_rendered_video(input_path)
     out_path = OUTPUT_DIR / output_filename
@@ -281,7 +353,6 @@ def upscale_video_pro(
         )
         crf = 17
     elif profile == "halation_remaster":
-        # True Dual-Path Optical Film Halation Bloom + FidelityFX CAS!
         vf_complex = (
             "[0:v]hqdn3d=1.2:1.2:4:4,deband,split=2[base][glow_src];"
             "[glow_src]curves=all='0/0 0.65/0 1/1',gblur=sigma=18,colorbalance=rh=0.25:gh=0.06:bh=-0.12[glow];"
@@ -289,7 +360,7 @@ def upscale_video_pro(
         )
         enc_args = get_video_encode_args(mode=encoder_mode, crf=16, bitrate="14M")
         cmd = [
-            "ffmpeg", "-y", "-i", str(input_path),
+            "ffmpeg", "-nostdin", "-y", "-i", str(input_path),
             "-filter_complex", vf_complex,
             "-map", "[vout]", "-map", "0:a?",
             *enc_args,
@@ -308,7 +379,7 @@ def upscale_video_pro(
             "before": before_qa,
             "after": after_qa,
         }
-    else:  # cas_2x (ByteDance / Topaz crisp 2x detail restoration)
+    else:
         target_w = min(3840, (bw * 2) - ((bw * 2) % 2))
         target_h = min(3840, (bh * 2) - ((bh * 2) % 2))
         vf = (
@@ -320,7 +391,7 @@ def upscale_video_pro(
 
     enc_args = get_video_encode_args(mode=encoder_mode, crf=crf, bitrate="14M")
     cmd = [
-        "ffmpeg", "-y", "-i", str(input_path),
+        "ffmpeg", "-nostdin", "-y", "-i", str(input_path),
         "-vf", vf,
         *enc_args,
         "-c:a", "aac", "-ar", "48000", "-b:a", "256k",
@@ -341,73 +412,80 @@ def upscale_video_pro(
     }
 
 
-# ==================== 3x3 CONTINUITY STORYBOARD SHEET BUILDER ====================
+# ==================== 3x3 CONTINUITY STORYBOARD SHEET BUILDER (SUPPORTS VIDEO + IMAGE) ====================
 
 def build_continuity_storyboard_sheet(
-    image_paths: List[str],
+    media_items: List[Dict[str, Any]],
     title: str,
     use_case: str,
     out_path: Path,
 ) -> Path:
-    """
-    Generates an InVideo Agent Two-style 3x3 Cinema Continuity Storyboard Contact Sheet
-    (inspired directly by film-entertainment.mp4 frame 3!).
-    """
     sheet_w, sheet_h = 1440, 920
     sheet = Image.new("RGB", (sheet_w, sheet_h), (8, 9, 14))
     draw = ImageDraw.Draw(sheet)
 
-    hf = _load_font(30, bold=True)
-    sf = _load_font(16, bold=False)
+    hf = _load_font(28, bold=True)
     mf = _load_font(14, bold=True)
 
-    draw.text((32, 22), f"AGENT TWO // SHOT-TO-SHOT CONTINUITY STORYBOARD", font=mf, fill=(217, 255, 0))
-    draw.text((32, 46), f"{title[:48]}  •  {use_case.replace('_', ' ').upper()}", font=hf, fill=(245, 245, 247))
+    draw.text((32, 22), "AGENT TWO v11 // SHOT-TO-SHOT CONTINUITY STORYBOARD", font=mf, fill=(217, 255, 0))
+    draw.text((32, 46), f"{title[:56]}  •  {use_case.replace('_', ' ').upper()}", font=hf, fill=(245, 245, 247))
 
-    cols, rows = 3, 2 if len(image_paths) <= 6 else 3
+    cols, rows = 3, 2
     pad_x, pad_y = 32, 102
     gap = 18
     cell_w = (sheet_w - pad_x * 2 - gap * (cols - 1)) // cols
     cell_h = (sheet_h - pad_y - 36 - gap * (rows - 1)) // rows
 
-    total_slots = cols * rows
-    for idx in range(total_slots):
+    for idx in range(cols * rows):
         r = idx // cols
         c = idx % cols
         x0 = pad_x + c * (cell_w + gap)
         y0 = pad_y + r * (cell_h + gap)
-        src_p = image_paths[idx % max(1, len(image_paths))] if image_paths else None
-        if src_p and Path(src_p).exists():
+        item = media_items[idx % max(1, len(media_items))] if media_items else None
+        im = None
+        if item and Path(item["path"]).exists():
             try:
-                im = Image.open(src_p).convert("RGB")
-                iw, ih = im.size
-                tr = cell_w / cell_h
-                if iw / ih > tr:
-                    nw = int(ih * tr)
-                    im = im.crop(((iw - nw) // 2, 0, (iw + nw) // 2, ih))
+                if item["kind"] == "video":
+                    tmp_f = OUTPUT_DIR / f"_sb_kf_{uuid.uuid4().hex[:6]}.jpg"
+                    subprocess.run(
+                        ["ffmpeg", "-nostdin", "-y", "-ss", "0.8", "-i", str(item["path"]), "-vframes", "1", str(tmp_f)],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    )
+                    if tmp_f.exists():
+                        im = Image.open(tmp_f).convert("RGB")
+                        tmp_f.unlink(missing_ok=True)
                 else:
-                    nh = int(iw / tr)
-                    im = im.crop((0, (ih - nh) // 2, iw, (ih + nh) // 2))
-                im = im.resize((cell_w, cell_h), Image.Resampling.LANCZOS)
-                sheet.paste(im, (x0, y0))
+                    im = Image.open(item["path"]).convert("RGB")
             except Exception:
-                draw.rectangle([x0, y0, x0 + cell_w, y0 + cell_h], fill=(22, 24, 34))
+                im = None
+
+        if im is not None:
+            iw, ih = im.size
+            tr = cell_w / cell_h
+            if iw / ih > tr:
+                nw = int(ih * tr)
+                im = im.crop(((iw - nw) // 2, 0, (iw + nw) // 2, ih))
+            else:
+                nh = int(iw / tr)
+                im = im.crop((0, (ih - nh) // 2, iw, (ih + nh) // 2))
+            im = im.resize((cell_w, cell_h), Image.Resampling.LANCZOS)
+            sheet.paste(im, (x0, y0))
         else:
             draw.rectangle([x0, y0, x0 + cell_w, y0 + cell_h], fill=(22, 24, 34))
 
-        # Shot badge & crisp border
         draw.rectangle([x0, y0, x0 + cell_w, y0 + cell_h], outline=(56, 62, 82), width=2)
-        draw.rounded_rectangle([x0 + 10, y0 + 10, x0 + 96, y0 + 36], radius=6, fill=(5, 5, 7))
-        draw.text((x0 + 18, y0 + 15), f"SHOT 0{idx+1}", font=mf, fill=(217, 255, 0))
+        tag = f"SHOT 0{idx+1} • {'VIDEO' if (item and item['kind'] == 'video') else 'HD'}"
+        draw.rounded_rectangle([x0 + 10, y0 + 10, x0 + 158, y0 + 36], radius=6, fill=(5, 5, 7))
+        draw.text((x0 + 18, y0 + 15), tag, font=mf, fill=(217, 255, 0))
 
     sheet.save(str(out_path), quality=92)
     return out_path
 
 
-# ==================== PARALLEL CINEMA SCENE PRE-RENDERER ====================
+# ==================== PARALLEL HYBRID REAL-VIDEO + AI-IMAGE SHOT RENDERER ====================
 
 def _render_single_cinema_shot(
-    img_path: str,
+    media: Dict[str, Any],
     out_clip: Path,
     w: int,
     h: int,
@@ -415,69 +493,121 @@ def _render_single_cinema_shot(
     fps: int,
     move: str,
     grade_filter: str,
-    editorial_text: Optional[str],
+    editorial_headline: Optional[str],
+    editorial_subtitle: Optional[str],
     use_motion_blur: bool,
     encoder_mode: str,
 ) -> Path:
     """
-    Renders a single supersampled high-efficiency cinema shot on a dedicated worker thread
-    with smooth cubic-like camera motion, optional 180-deg shutter motion blur (tmix),
-    FidelityFX CAS sharpening, and clean luxury editorial typography overlay!
+    Renders a single shot on a dedicated worker thread:
+    - If media['kind'] == 'video' (REAL moving AI video / Pexels 4K Video / Pixabay Video / Uploaded Clip):
+      Preserves 100% authentic motion, smart center-fills to WxH, applies Cinema LUT + FidelityFX CAS + Deband!
+    - If media['kind'] == 'image' (FLUX.1 / Imagen 3 / Curated HD):
+      Applies silky supersampled camera trajectory + optional 180-deg shutter blur + Cinema LUT!
+    - Composites 2x-supersampled high-fashion editorial typography PNG with smooth fade-in/out (ZERO raw drawtext!).
     """
-    frames = max(12, int(dur * fps))
-    up_w = int(w * 1.45)
-    up_h = int(h * 1.45)
-
-    # Smooth continuous sub-pixel zoompan camera trajectories
-    if move == "dolly_in":
-        zp = f"zoompan=z='min(1.24,1.0+0.24*on/{frames})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={w}x{h}:fps={fps}"
-    elif move == "dolly_out":
-        zp = f"zoompan=z='max(1.0,1.24-0.24*on/{frames})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={w}x{h}:fps={fps}"
-    elif move == "pan_right":
-        zp = f"zoompan=z='1.18':x='(iw-iw/zoom)*on/{frames}':y='ih/2-(ih/zoom/2)':d={frames}:s={w}x{h}:fps={fps}"
-    elif move == "pan_left":
-        zp = f"zoompan=z='1.18':x='(iw-iw/zoom)*(1-on/{frames})':y='ih/2-(ih/zoom/2)':d={frames}:s={w}x{h}:fps={fps}"
-    elif move == "crash_zoom":
-        zp = f"zoompan=z='1.0+0.32*pow(on/{frames},2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={w}x{h}:fps={fps}"
-    else:  # orbit_drift
-        zp = f"zoompan=z='1.14+0.05*sin(on*0.08)':x='iw/2-(iw/zoom/2)+38*sin(on*0.06)':y='ih/2-(ih/zoom/2)+20*cos(on*0.05)':d={frames}:s={w}x{h}:fps={fps}"
-
-    chain = [
-        f"scale={up_w}:{up_h}:force_original_aspect_ratio=increase:flags=lanczos",
-        f"crop={up_w}:{up_h}",
-        "setsar=1",
-        zp,
-    ]
-    if use_motion_blur:
-        chain.append("tmix=frames=2:weights='3 1'")
-    if grade_filter:
-        chain.append(grade_filter)
-
-    # Optional luxury minimalist editorial typography centered cleanly (Product_Showcase_1 style!)
-    if editorial_text and editorial_text.strip():
-        safe_t = editorial_text.strip().replace("'", "").replace(":", " ").replace("%", "pct")[:32].upper()
-        fz = max(28, int(min(w, h) * 0.046))
-        chain.append(
-            f"drawtext=text='{safe_t}':fontcolor=white@0.92:fontsize={fz}:"
-            f"shadowcolor=black@0.45:shadowx=0:shadowy=4:x=(w-text_w)/2:y=(h-text_h)/2:"
-            f"alpha='min(1,t/0.45)*min(1,max(0,({dur:.2f}-t)/0.4))'"
-        )
+    title_png: Optional[Path] = None
+    if editorial_headline and editorial_headline.strip():
+        title_png = OUTPUT_DIR / f"_ed_title_{uuid.uuid4().hex[:8]}.png"
+        render_editorial_title_png(editorial_headline, editorial_subtitle or "", w, h, title_png)
 
     enc_args = get_video_encode_args(mode=encoder_mode, crf=16, bitrate="12M")
-    cmd = [
-        "ffmpeg", "-y", "-i", str(img_path),
-        "-vf", ",".join(chain),
-        *enc_args,
-        "-an",
-        str(out_clip),
-    ]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise RuntimeError(f"Shot render failed: {proc.stderr[-300:]}")
-    return out_clip
+
+    try:
+        if media["kind"] == "video":
+            # TRUE REAL-FOOTAGE CINEMA PIPELINE (NO FAKE ZOOMPAN SLIDESHOW!)
+            base_filters = [
+                f"scale={w}:{h}:force_original_aspect_ratio=increase:flags=lanczos",
+                f"crop={w}:{h}",
+                f"fps={fps}",
+                "setsar=1",
+            ]
+            if grade_filter:
+                base_filters.append(grade_filter)
+
+            if title_png:
+                fade_out_st = max(0.3, dur - 0.5)
+                fc = (
+                    f"[0:v]{','.join(base_filters)}[vb];"
+                    f"[1:v]format=rgba,fade=t=in:st=0.2:d=0.45:alpha=1,fade=t=out:st={fade_out_st:.2f}:d=0.45:alpha=1[vt];"
+                    f"[vb][vt]overlay=0:0:eof_action=repeat[vout]"
+                )
+                cmd = [
+                    "ffmpeg", "-nostdin", "-y", "-stream_loop", "-1", "-i", str(media["path"]),
+                    "-loop", "1", "-framerate", str(fps), "-t", f"{dur:.2f}", "-i", str(title_png),
+                    "-filter_complex", fc,
+                    "-map", "[vout]",
+                    "-t", f"{dur:.2f}",
+                    *enc_args, "-an", str(out_clip),
+                ]
+            else:
+                cmd = [
+                    "ffmpeg", "-nostdin", "-y", "-stream_loop", "-1", "-i", str(media["path"]),
+                    "-vf", ",".join(base_filters),
+                    "-t", f"{dur:.2f}",
+                    *enc_args, "-an", str(out_clip),
+                ]
+        else:
+            # HIGH-RES AI IMAGE / CURATED PHOTO CINEMA PIPELINE
+            frames = max(12, int(dur * fps))
+            up_w, up_h = int(w * 1.4), int(h * 1.4)
+            if move == "dolly_in":
+                zp = f"zoompan=z='min(1.20,1.0+0.20*on/{frames})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={w}x{h}:fps={fps}"
+            elif move == "dolly_out":
+                zp = f"zoompan=z='max(1.0,1.20-0.20*on/{frames})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={w}x{h}:fps={fps}"
+            elif move == "pan_right":
+                zp = f"zoompan=z='1.16':x='(iw-iw/zoom)*on/{frames}':y='ih/2-(ih/zoom/2)':d={frames}:s={w}x{h}:fps={fps}"
+            elif move == "pan_left":
+                zp = f"zoompan=z='1.16':x='(iw-iw/zoom)*(1-on/{frames})':y='ih/2-(ih/zoom/2)':d={frames}:s={w}x{h}:fps={fps}"
+            elif move == "crash_zoom":
+                zp = f"zoompan=z='1.0+0.26*pow(on/{frames},2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={w}x{h}:fps={fps}"
+            else:
+                zp = f"zoompan=z='1.12+0.04*sin(on*0.08)':x='iw/2-(iw/zoom/2)+34*sin(on*0.06)':y='ih/2-(ih/zoom/2)+18*cos(on*0.05)':d={frames}:s={w}x{h}:fps={fps}"
+
+            chain = [
+                f"scale={up_w}:{up_h}:force_original_aspect_ratio=increase:flags=lanczos",
+                f"crop={up_w}:{up_h}",
+                "setsar=1",
+                zp,
+            ]
+            if use_motion_blur:
+                chain.append("tmix=frames=2:weights='3 1'")
+            if grade_filter:
+                chain.append(grade_filter)
+
+            if title_png:
+                fade_out_st = max(0.3, dur - 0.5)
+                fc = (
+                    f"[0:v]{','.join(chain)}[vb];"
+                    f"[1:v]format=rgba,fade=t=in:st=0.2:d=0.45:alpha=1,fade=t=out:st={fade_out_st:.2f}:d=0.45:alpha=1[vt];"
+                    f"[vb][vt]overlay=0:0:eof_action=repeat[vout]"
+                )
+                cmd = [
+                    "ffmpeg", "-nostdin", "-y", "-i", str(media["path"]),
+                    "-loop", "1", "-framerate", str(fps), "-t", f"{dur:.2f}", "-i", str(title_png),
+                    "-filter_complex", fc,
+                    "-map", "[vout]",
+                    "-t", f"{dur:.2f}",
+                    *enc_args, "-an", str(out_clip),
+                ]
+            else:
+                cmd = [
+                    "ffmpeg", "-nostdin", "-y", "-i", str(media["path"]),
+                    "-vf", ",".join(chain),
+                    "-t", f"{dur:.2f}",
+                    *enc_args, "-an", str(out_clip),
+                ]
+
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        if proc.returncode != 0:
+            raise RuntimeError(f"Shot render failed: {proc.stderr[-350:]}")
+        return out_clip
+    finally:
+        if title_png:
+            title_png.unlink(missing_ok=True)
 
 
-# ==================== AGENT TWO: MULTI-AGENT CINEMA DIRECTOR ====================
+# ==================== AGENT TWO: MULTI-AGENT CINEMA DIRECTOR v11.0 ====================
 
 USE_CASE_TEMPLATES: Dict[str, Dict[str, Any]] = {
     "ad_filmmaking": {
@@ -485,8 +615,7 @@ USE_CASE_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "grade": "luxury_halation",
         "cadence": 24,
         "music": "ambient",
-        "moves": ["dolly_in", "pan_right", "crash_zoom", "dolly_out", "orbit_drift", "dolly_in"],
-        "visual_suffix": "commercial studio photography cinema lighting 8k",
+        "moves": ["dolly_in", "pan_right", "crash_zoom", "dolly_out", "orbit_drift"],
         "editorial_mode": True,
     },
     "performance_marketing": {
@@ -494,17 +623,15 @@ USE_CASE_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "grade": "high_roas_crisp",
         "cadence": 30,
         "music": "upbeat",
-        "moves": ["crash_zoom", "pan_right", "dolly_in", "pan_left", "dolly_out", "crash_zoom"],
-        "visual_suffix": "vibrant modern lifestyle product commercial photography",
-        "editorial_mode": False,
+        "moves": ["crash_zoom", "pan_right", "dolly_in", "pan_left", "dolly_out"],
+        "editorial_mode": True,
     },
     "filmmaking": {
         "name": "Theatrical Filmmaking (24fps Anamorphic)",
         "grade": "kodak_cinema_24",
         "cadence": 24,
         "music": "cinematic",
-        "moves": ["dolly_in", "orbit_drift", "pan_left", "dolly_out", "dolly_in", "pan_right"],
-        "visual_suffix": "cinematic film still dramatic lighting anamorphic lens",
+        "moves": ["dolly_in", "orbit_drift", "pan_left", "dolly_out", "dolly_in"],
         "editorial_mode": True,
     },
     "micro_drama": {
@@ -512,8 +639,7 @@ USE_CASE_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "grade": "moody_a24",
         "cadence": 24,
         "music": "dark_suspense",
-        "moves": ["dolly_in", "dolly_out", "orbit_drift", "crash_zoom", "pan_left", "dolly_in"],
-        "visual_suffix": "dramatic moody portrait cinematic film lighting shallow depth",
+        "moves": ["dolly_in", "dolly_out", "orbit_drift", "crash_zoom", "pan_left"],
         "editorial_mode": False,
     },
     "ai_ugc": {
@@ -521,8 +647,7 @@ USE_CASE_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "grade": "editorial_minimal",
         "cadence": 30,
         "music": "lofi",
-        "moves": ["orbit_drift", "dolly_in", "pan_right", "dolly_out", "orbit_drift", "dolly_in"],
-        "visual_suffix": "authentic daylight lifestyle creator portrait natural aesthetic",
+        "moves": ["orbit_drift", "dolly_in", "pan_right", "dolly_out", "orbit_drift"],
         "editorial_mode": False,
     },
     "ai_vfx": {
@@ -530,8 +655,7 @@ USE_CASE_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "grade": "cyber_vfx",
         "cadence": 60,
         "music": "cyberpunk",
-        "moves": ["crash_zoom", "orbit_drift", "pan_right", "dolly_in", "dolly_out", "crash_zoom"],
-        "visual_suffix": "futuristic neon sci-fi visual effects volumetric lighting epic",
+        "moves": ["crash_zoom", "orbit_drift", "pan_right", "dolly_in", "dolly_out"],
         "editorial_mode": True,
     },
     "pre_viz": {
@@ -539,8 +663,7 @@ USE_CASE_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "grade": "kodak_cinema_24",
         "cadence": 24,
         "music": "cinematic",
-        "moves": ["pan_right", "dolly_in", "pan_left", "orbit_drift", "dolly_out", "dolly_in"],
-        "visual_suffix": "concept art cinematic production design storyboard frame",
+        "moves": ["pan_right", "dolly_in", "pan_left", "orbit_drift", "dolly_out"],
         "editorial_mode": True,
     },
 }
@@ -548,26 +671,29 @@ USE_CASE_TEMPLATES: Dict[str, Dict[str, Any]] = {
 
 class RenderEngine:
     """
-    OmniViral Cinema Render Engine v10.0:
-    Combines Agent Two Multi-Agent orchestration, Parallel ThreadPool Scene Pre-Rendering,
-    Hardware GPU Acceleration (AMF/MF/NVENC/QSV), AMD FidelityFX CAS + Deband + Optical Halation,
-    BT.709 48kHz Mastering, 3x3 Continuity Storyboard Generation, and Self-Review QA Scoring.
+    OmniViral Cinema Render Engine v11.0:
+    - Real Generative Video Diffusion (fal.ai Seedance/Kling/Wan/MiniMax, Replicate, Gemini Imagen 3)
+    - Real Moving 4K Cinema Footage (Pexels 4K Video, Pixabay Video, User Uploaded Clips)
+    - Photoreal AI Image Gen (HuggingFace FLUX.1-schnell) + Clutter-Free Curated Fallback
+    - 2x Supersampled High-Fashion Editorial Typography (ZERO raw drawtext / ZERO clashing stickers!)
+    - Parallel GPU Render + Optical Halation + FidelityFX CAS + Deband + BT.709 + 48kHz -14 LUFS
     """
 
     @staticmethod
     async def run_agent_two_production(
         brief: str,
         use_case: str = "ad_filmmaking",
-        brand_name: str = "OmniViral Studio",
+        brand_name: str = "AETHER LUXE",
         aspect_ratio: str = "9:16",
         fps: Optional[int] = None,
         grade_id: Optional[str] = None,
-        encoder_mode: str = "auto",
+        encoder_mode: str = "gpu_fast",
         voice_id: str = "en-US-AndrewNeural",
-        caption_style: str = "editorial",  # editorial | hormozi | volt_lime | none
+        caption_style: str = "editorial",
         enable_halation: bool = True,
         enable_motion_blur: bool = True,
-        model_profile: str = "omniviral_local_zero_cost",
+        model_profile: str = "omniviral_cinema_v10",
+        custom_clip_paths: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         t_start = time.perf_counter()
         job_id = str(uuid.uuid4())[:8]
@@ -585,49 +711,62 @@ class RenderEngine:
 
         agent_trace: List[Dict[str, Any]] = []
 
-        # ---- AGENT 1: CONTEXT, MEMORY & SCRIPT DIRECTOR ----
+        # ---- AGENT 1: CONTEXT, PROMPT ENGINEERING & TIGHT COMMERCIAL SCRIPT ----
         t1 = time.perf_counter()
-        clean_brief = brief.strip() or "Luxury botanical fragrance launch at golden hour"
-        keywords = [w for w in re.sub(r"[^a-zA-Z0-9\s]", "", clean_brief).split() if len(w) > 2][:6]
-        topic_core = " ".join(keywords[:4]) or "luxury cinema product"
+        clean_brief = brief.strip() or "Luxury botanical fragrance in golden hour sunlight"
+        stop_words = {"with", "that", "this", "from", "into", "your", "bathed", "launch", "video", "about", "make", "create"}
+        keywords = [
+            w for w in re.sub(r"[^a-zA-Z0-9\s]", "", clean_brief).split()
+            if len(w) > 2 and w.lower() not in stop_words
+        ][:6]
+        kw_primary = " ".join(keywords[:2]) or "luxury perfume"
+        kw_secondary = " ".join(keywords[1:3]) or kw_primary
 
-        kw1 = " ".join(keywords[:2]) or "luxury product"
-        kw2 = " ".join(keywords[1:3]) or kw1
-        kw3 = " ".join(keywords[2:4]) or kw1
+        # Punchy 13-15s commercial rhythm (matching InVideo reference commercial durations!)
         scenes_plan = [
             {
                 "shot": 1,
-                "narration": f"Introducing {brand_name}. {clean_brief[:65]}.",
+                "narration": f"{brand_name}. Pure craft in motion.",
                 "editorial": brand_name.upper(),
-                "visual_query": f"{kw1}",
+                "subtitle": "NEW COLLECTION",
+                "prompt": f"Cinematic macro close-up of {clean_brief}, golden hour rim light, luxury commercial film, 35mm shallow depth of field",
+                "search_query": kw_primary,
                 "move": uc["moves"][0],
             },
             {
                 "shot": 2,
-                "narration": "Crafted with extraordinary precision, sculpted light, and effortless modern beauty.",
-                "editorial": "CRAFTED TO STAND OUT",
-                "visual_query": f"{kw2} aesthetic",
+                "narration": "Sculpted by golden light, designed for effortless presence.",
+                "editorial": "SCULPTED BY LIGHT",
+                "subtitle": "",
+                "prompt": f"Editorial fashion commercial shot of {clean_brief}, soft sunlit highlights, flowing motion, slow motion cinema",
+                "search_query": kw_secondary,
                 "move": uc["moves"][1],
             },
             {
                 "shot": 3,
-                "narration": "Every frame flows seamlessly from atmosphere to emotion with studio-grade clarity.",
-                "editorial": "MOTION IN EVERY FRAME",
-                "visual_query": f"{kw1} studio",
+                "narration": "Every detail elevates the moment.",
+                "editorial": "FEEL THE MOMENT",
+                "subtitle": "",
+                "prompt": f"Atmospheric luxury lifestyle medium shot inspired by {clean_brief}, warm film grain, smooth dolly tracking shot",
+                "search_query": f"{kw_primary} aesthetic",
                 "move": uc["moves"][2],
             },
             {
                 "shot": 4,
-                "narration": "Designed to stop the scroll and elevate your story across every screen.",
-                "editorial": "DESIGNED FOR IMPACT",
-                "visual_query": f"{kw3} sunlight",
+                "narration": "Unmistakable clarity from the very first frame.",
+                "editorial": "EFFORTLESS LUXURY",
+                "subtitle": "",
+                "prompt": f"High-fashion studio hero angle of {clean_brief}, crisp reflections, dramatic warm shadows, 8k commercial",
+                "search_query": f"{kw_secondary} sunlight",
                 "move": uc["moves"][3],
             },
             {
                 "shot": 5,
-                "narration": f"Experience the next era today with {brand_name}.",
-                "editorial": f"EXPERIENCE {brand_name.upper()}",
-                "visual_query": f"{kw1} minimal",
+                "narration": f"Experience {brand_name} today.",
+                "editorial": brand_name.upper(),
+                "subtitle": "DISCOVER NOW",
+                "prompt": f"Minimalist iconic finale shot of {clean_brief}, glowing sunlight bokeh, calm luxury aesthetic",
+                "search_query": kw_primary,
                 "move": uc["moves"][4],
             },
         ]
@@ -636,59 +775,65 @@ class RenderEngine:
             "agent": "01 / Context & Prompt Director",
             "status": "done",
             "ms": round((time.perf_counter() - t1) * 1000),
-            "detail": f"Planned 5 continuity shots • Use Case: {uc['name']} • Routing: {model_profile}",
+            "detail": f"Engineered 5 cinema prompts (tight commercial rhythm) • Model Route: {model_profile}",
         })
 
-        # ---- AGENT 2: CASTING, PRODUCTION DESIGN & PARALLEL ASSET FETCHING ----
+        # ---- AGENT 2: REAL VIDEO DIFFUSION / 4K FOOTAGE ACQUISITION + NEURAL VOICE ----
         t2 = time.perf_counter()
         vo_res = await VoiceService.synthesize_speech(
             text=full_script,
             voice_id=voice_id,
             output_filename=f"agent2_vo_{job_id}.mp3",
-            rate="+5%",
+            rate="+8%",
         )
         vo_path = Path(vo_res["audio_path"])
-        total_dur = max(10.0, float(vo_res.get("duration") or 12.5))
+        total_dur = max(11.5, min(18.0, float(vo_res.get("duration") or 13.5)))
 
-        # Fetch all 5 scene HD visuals concurrently with asyncio.gather!
-        async def _fetch_shot_img(idx: int, sc: Dict[str, Any]) -> str:
-            fn = await VisualService.generate_scene_image_preview(
-                prompt=sc["visual_query"],
+        uploads = custom_clip_paths or []
+
+        async def _acquire(idx: int, sc: Dict[str, Any]) -> Dict[str, Any]:
+            custom_p = uploads[idx % len(uploads)] if uploads else None
+            return await CinemaMediaEngine.acquire_shot_media(
+                prompt=sc["prompt"],
+                search_query=sc["search_query"],
                 aspect_ratio=aspect_ratio,
-                seed=abs(hash(f"{job_id}_{idx}_{sc['visual_query']}")) % 900000 + 10000,
+                model_profile=model_profile,
+                shot_idx=idx,
+                job_id=job_id,
+                custom_clip_path=custom_p,
             )
-            fp = Path(fn)
-            return str(fp if fp.is_absolute() and fp.exists() else (OUTPUT_DIR / fp.name))
 
-        shot_img_paths = list(
-            await asyncio.gather(*[_fetch_shot_img(i, sc) for i, sc in enumerate(scenes_plan)])
-        )
+        media_items = list(await asyncio.gather(*[_acquire(i, sc) for i, sc in enumerate(scenes_plan)]))
+        real_video_count = sum(1 for m in media_items if m["kind"] == "video")
+        sources_summary = sorted(set(f"{m['source']} ({m['model']})" for m in media_items))
+
         agent_trace.append({
-            "agent": "02 / Casting & Production Design",
+            "agent": "02 / Cinema Media & Voice Production",
             "status": "done",
             "ms": round((time.perf_counter() - t2) * 1000),
-            "detail": f"Synthesized neural voice ({total_dur:.1f}s) + parallel-fetched {len(shot_img_paths)} HD frames",
+            "detail": f"Acquired {real_video_count}/5 real moving video clips • Sources: {', '.join(sources_summary)}",
         })
 
-        # ---- AGENT 3: 3x3 SHOT-TO-SHOT CONTINUITY STORYBOARD CONTACT SHEET ----
+        # ---- AGENT 3: 3x3 CONTINUITY STORYBOARD CONTACT SHEET ----
         t3 = time.perf_counter()
         sb_fn = f"agent2_storyboard_{job_id}.jpg"
         sb_path = OUTPUT_DIR / sb_fn
-        build_continuity_storyboard_sheet(shot_img_paths, clean_brief[:56], use_case, sb_path)
+        build_continuity_storyboard_sheet(media_items, clean_brief, use_case, sb_path)
         agent_trace.append({
             "agent": "03 / Storyboard & Continuity Agent",
             "status": "done",
             "ms": round((time.perf_counter() - t3) * 1000),
-            "detail": f"Generated high-res continuity contact sheet ({sb_fn})",
+            "detail": f"Built continuity sheet ({sb_fn}) from active {'video keyframes' if real_video_count else 'studio frames'}",
         })
 
-        # ---- AGENT 4: PARALLEL MULTI-THREADED CINEMA RENDER ENGINE ----
+        # ---- AGENT 4: PARALLEL GPU CINEMA RENDER + SUPERSAMPLED EDITORIAL TYPOGRAPHY ----
         t4 = time.perf_counter()
-        xfade_dur = 0.45
-        n_shots = len(shot_img_paths)
-        shot_dur = (total_dur + xfade_dur * (n_shots - 1)) / n_shots + 0.15
-
+        xfade_dur = 0.40
+        n_shots = len(media_items)
+        shot_dur = (total_dur + xfade_dur * (n_shots - 1)) / n_shots + 0.12
         clip_paths = [OUTPUT_DIR / f"agent2_clip_{job_id}_{i}.mp4" for i in range(n_shots)]
+
+        use_editorial = (caption_style == "editorial")
         loop = asyncio.get_running_loop()
         max_workers = min(3, n_shots)
 
@@ -697,7 +842,7 @@ class RenderEngine:
                 loop.run_in_executor(
                     pool,
                     _render_single_cinema_shot,
-                    shot_img_paths[i],
+                    media_items[i],
                     clip_paths[i],
                     W,
                     H,
@@ -705,7 +850,8 @@ class RenderEngine:
                     target_fps,
                     scenes_plan[i]["move"],
                     grade_obj["filter"],
-                    scenes_plan[i]["editorial"] if (caption_style == "editorial" or uc["editorial_mode"]) else None,
+                    scenes_plan[i]["editorial"] if use_editorial else None,
+                    scenes_plan[i]["subtitle"] if use_editorial else None,
                     enable_motion_blur,
                     encoder_mode,
                 )
@@ -713,7 +859,6 @@ class RenderEngine:
             ]
             await asyncio.gather(*tasks)
 
-        # Stitch parallel clips with smooth xfade cinema transitions + optional optical halation + studio pill hook + 48kHz -14 LUFS audio!
         out_fn = f"agent2_master_{use_case}_{job_id}.mp4"
         out_path = OUTPUT_DIR / out_fn
 
@@ -729,21 +874,14 @@ class RenderEngine:
         bgm_idx = n_shots + 1
         cmd.extend(["-i", str(bgm_path)])
 
-        hook_png = OUTPUT_DIR / f"agent2_hook_{job_id}.png"
-        MotionGraphicsEngine.render_hook_pill_png(
-            text=brand_name.upper(),
-            out_path=hook_png,
-            accent_hex="#D9FF00",
-            theme_id="oled_volt",
-            icon="sparkle",
-            font_size=max(24, int(min(W, H) * 0.028)),
-        )
-        hook_idx = n_shots + 2
-        cmd.extend(["-i", str(hook_png)])
+        # Clean minimalist transparent top-right editorial brand mark (NO clashing neon sticker!)
+        wm_png = OUTPUT_DIR / f"agent2_wm_{job_id}.png"
+        render_minimal_brand_watermark_png(brand_name, W, H, wm_png)
+        wm_idx = n_shots + 2
+        cmd.extend(["-i", str(wm_png)])
 
         f_parts: List[str] = []
-        # Smooth cinema xfade chain
-        transitions = ["fade", "wipeleft", "smoothleft", "dissolve", "fade"]
+        transitions = ["fade", "dissolve", "smoothleft", "fade", "dissolve"]
         prev_lbl = "[0:v]"
         offset = shot_dur - xfade_dur
         for i in range(1, n_shots):
@@ -753,12 +891,12 @@ class RenderEngine:
             prev_lbl = nxt
             offset += (shot_dur - xfade_dur)
 
-        # Optional Dual-Path True Optical Film Halation Bloom
+        # Dual-Path Optical Film Halation Bloom
         if enable_halation:
             f_parts.append(
                 f"{prev_lbl}split=2[h_base][h_src];"
-                f"[h_src]curves=all='0/0 0.72/0 1/1',gblur=sigma=14,colorbalance=rh=0.22:gh=0.05:bh=-0.10[h_glow];"
-                f"[h_base][h_glow]blend=all_mode=screen:all_opacity=0.24[vhal]"
+                f"[h_src]curves=all='0/0 0.72/0 1/1',gblur=sigma=14,colorbalance=rh=0.20:gh=0.05:bh=-0.08[h_glow];"
+                f"[h_base][h_glow]blend=all_mode=screen:all_opacity=0.22[vhal]"
             )
             prev_lbl = "[vhal]"
 
@@ -768,11 +906,11 @@ class RenderEngine:
             f_parts.append(f"{prev_lbl}drawbox=x=0:y=0:w={W}:h={bar}:color=black:t=fill,drawbox=x=0:y={H-bar}:w={W}:h={bar}:color=black:t=fill[vlet]")
             prev_lbl = "[vlet]"
 
-        # Floating Studio Brand Sparkle Pill in top corner (v9.0 anti-aliased vector pill!)
-        f_parts.append(f"{prev_lbl}[{hook_idx}:v]overlay=x=32:y=28:enable='between(t,0.25,{total_dur:.2f})'[vpill]")
-        prev_lbl = "[vpill]"
+        # Subtle transparent top-right brand mark
+        f_parts.append(f"{prev_lbl}[{wm_idx}:v]overlay=0:0[vwm]")
+        prev_lbl = "[vwm]"
 
-        # Optional Viral Word-by-Word ASS Captions (when not minimalist editorial)
+        # Optional Viral ASS captions when user selects volt_lime / hormozi instead of minimalist editorial
         sub_path = None
         if caption_style not in ("none", "editorial"):
             sub_path = OUTPUT_DIR / f"agent2_sub_{job_id}.ass"
@@ -791,7 +929,7 @@ class RenderEngine:
         # Broadcast 48kHz Sidechain-Ducked Audio + -14 LUFS Loudnorm
         f_parts.append(
             f"[{audio_idx}:a]aformat=sample_rates=48000:channel_layouts=stereo,asplit=2[vo_m][vo_sc];"
-            f"[{bgm_idx}:a]aformat=sample_rates=48000:channel_layouts=stereo,volume=0.22[bg_r];"
+            f"[{bgm_idx}:a]aformat=sample_rates=48000:channel_layouts=stereo,volume=0.24[bg_r];"
             f"[bg_r][vo_sc]sidechaincompress=threshold=0.03:ratio=6:attack=25:release=250[bg_d];"
             f"[vo_m][bg_d]amix=inputs=2:duration=first:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11[aout]"
         )
@@ -807,10 +945,9 @@ class RenderEngine:
         ])
         proc = subprocess.run(cmd, capture_output=True, text=True)
 
-        # Clean intermediate temp clips
         for cp in clip_paths:
             cp.unlink(missing_ok=True)
-        for tmp in (bgm_path, hook_png, vo_path, sub_path):
+        for tmp in (bgm_path, wm_png, vo_path, sub_path):
             if tmp:
                 Path(tmp).unlink(missing_ok=True)
 
@@ -821,7 +958,7 @@ class RenderEngine:
             "agent": "04 / Parallel Cinema Render Engine",
             "status": "done",
             "ms": round((time.perf_counter() - t4) * 1000),
-            "detail": f"Rendered {n_shots} parallel shots ({max_workers} threads) @ {target_fps}fps • {active_grade_id} • BT.709 • 48kHz",
+            "detail": f"Mastered {n_shots} shots ({real_video_count} real video) @ {target_fps}fps • 2x SSAA Typography • Halation • 48kHz",
         })
 
         # ---- AGENT 5: SELF-REVIEW & AUTO-CORRECTION QA GATE ----
@@ -836,7 +973,7 @@ class RenderEngine:
 
         return {
             "id": job_id,
-            "title": f"Agent Two ({uc['name']}): {clean_brief[:38]}",
+            "title": f"Agent Two ({uc['name']}): {clean_brief[:42]}",
             "use_case": use_case,
             "aspect_ratio": aspect_ratio,
             "fps": target_fps,
@@ -849,6 +986,9 @@ class RenderEngine:
             "render_seconds": round(time.perf_counter() - t_start, 2),
             "encoder_mode": encoder_mode,
             "grade": active_grade_id,
+            "real_video_shots": real_video_count,
+            "media_sources": sources_summary,
+            "provider_status": get_active_media_providers(),
             "agent_trace": agent_trace,
             "qa_report": qa,
         }

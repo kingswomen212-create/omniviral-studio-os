@@ -31,6 +31,12 @@ class SettingsUpdateRequest(BaseModel):
     publish_webhook_url: Optional[str] = None
     groq_api_key: Optional[str] = None
     pexels_api_key: Optional[str] = None
+    pixabay_api_key: Optional[str] = None
+    hf_api_token: Optional[str] = None
+    fal_api_key: Optional[str] = None
+    replicate_api_token: Optional[str] = None
+    gemini_api_key: Optional[str] = None
+    comfyui_url: Optional[str] = None
 
 @router.post("")
 async def create_scheduled_post(req: ScheduleRequest):
@@ -157,4 +163,16 @@ async def update_settings(req: SettingsUpdateRequest):
         set_setting("groq_api_key", req.groq_api_key)
     if req.pexels_api_key is not None:
         set_setting("pexels_api_key", req.pexels_api_key)
+    if req.pixabay_api_key is not None:
+        set_setting("pixabay_api_key", req.pixabay_api_key)
+    if req.hf_api_token is not None:
+        set_setting("hf_api_token", req.hf_api_token)
+    if req.fal_api_key is not None:
+        set_setting("fal_api_key", req.fal_api_key)
+    if req.replicate_api_token is not None:
+        set_setting("replicate_api_token", req.replicate_api_token)
+    if req.gemini_api_key is not None:
+        set_setting("gemini_api_key", req.gemini_api_key)
+    if req.comfyui_url is not None:
+        set_setting("comfyui_url", req.comfyui_url)
     return {"status": "saved", "settings": get_all_settings()}

@@ -15,8 +15,11 @@ build/
 
 # Runtime generated media & local SQLite DB
 backend/output/
+backend/assets/uploads/
+backend/assets/cinema_vault/
 backend/*.db
 *.mp4
+*.webm
 *.mp3
 *.ass
 *.wav
